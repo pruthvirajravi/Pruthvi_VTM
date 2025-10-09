@@ -56,6 +56,8 @@
 
 //########### place macros to be removed in next cycle below this line ###############
 
+#define JVET_AN0237_FILM_GRAIN_ANALYSIS                   1 // film grain analysis improvements
+
 #define JVET_AM0280_DECODER_MEMORY_PRINT                  1 // JVET-AM0280: Decoder memory print
 
 #define JVET_AL0067_OMI_SEI_CONSTRAINTS                   1 // JVET-AL0067: On the OMI SEI
