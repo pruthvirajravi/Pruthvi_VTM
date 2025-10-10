@@ -37,7 +37,6 @@
 
 #include "SEIFilmGrainAnalyzer.h"
 
-constexpr double FGAnalyser::m_tapFilter[3];
 
 // ====================================================================================================================
 // Edge detection - Canny
@@ -1294,7 +1293,12 @@ int FGAnalyser::limit_cutoff_pairs(std::vector<Pairs>& pairs, int maxUnique)
     {
       int nid = static_cast<int>(nodes.size());
       id.emplace(pairs[i].p, nid);
-      nodes.push_back(Pairs{ pairs[i].p, pairs[i].w, {i} });
+      //nodes.push_back(Pairs{ pairs[i].p, pairs[i].w, {i} });
+      nodes.push_back(Pairs());
+      auto& n = nodes.back();
+      n.p = pairs[i].p;
+      n.w = pairs[i].w;
+      n.idx.push_back(i);
     }
     else
     {
