@@ -125,7 +125,7 @@ public:
 
   unsigned int      m_convWidthG = 5, m_convHeightG = 5;		  // Pixel's row and col positions for Gauss filtering
 
-  void detect_edges(const PelStorage* orig, PelStorage* dest, unsigned int uiBitDepth, ComponentID compID);
+  void detectEdges  (const PelStorage* orig, PelStorage* dest, unsigned int uiBitDepth, ComponentID compID);
 
 private:
   static const int  m_gx[3][3];                               // Sobel kernel x
@@ -173,7 +173,7 @@ public:
             const int sourcePaddingWidth,
             const int sourcePaddingHeight,
             const InputColourSpaceConversion ipCSC,
-            const bool         clipInputVideoToRec709Range,
+            const bool clipInputVideoToRec709Range,
             const ChromaFormat inputChroma,
             const BitDepths& inputBitDepths,
             const BitDepths& outputBitDepths,
@@ -227,23 +227,23 @@ private:
 
   void estimate_grain_parameters    ();
 #if JVET_AN0237_FILM_GRAIN_ANALYSIS
-  void block_transform              (const PelStorage& buff1, PelMatrix64u& squared_dct_grain_block, int offsetX, int offsetY, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
-  void estimate_cutoff_freq         (const std::vector<PelMatrix64u>& blocks, const std::vector<int>& neum_el, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
+  void block_transform              (const PelStorage& buff1, PelMatrix64u& squaredDctGrainBlock, int offsetX, int offsetY, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
+  void estimate_cutoff_freq         (const std::vector<PelMatrix64u>& blocks, const std::vector<int>& numEl, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
 #else
-  void block_transform              (const PelStorage& buff1, std::vector<PelMatrix>& squared_dct_grain_block_list, int offsetX, int offsetY, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
+  void block_transform              (const PelStorage& buff1, std::vector<PelMatrix>& squaredDctGrainBlockList, int offsetX, int offsetY, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
   void estimate_cutoff_freq         (const std::vector<PelMatrix>& blocks, const std::vector<int>& vec_mean, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
 #endif
   int  cutoff_frequency             (std::vector<double>& mean, unsigned int windowSize);
-  void estimate_scaling_factors     (std::vector<int>& data_x, std::vector<int>& data_y, unsigned int bitDepth, ComponentID compID);
+  void estimate_scaling_factors     (std::vector<int>& dataX, std::vector<int>& dataY, unsigned int bitDepth, ComponentID compID);
 
-  bool fit_function                 (std::vector<int>& data_x, std::vector<int>& data_y, std::vector<double>& coeffs, std::vector<double>& scalingVec,
-                                     int order, int bitDepth, bool second_pass, ComponentID compID);
+  bool fit_function                 (std::vector<int>& dataX, std::vector<int>& dataY, std::vector<double>& coeffs, std::vector<double>& scalingVec,
+                                     int order, int bitDepth, bool secondPass, ComponentID compID);
  #if !JVET_AN0237_FILM_GRAIN_ANALYSIS
   void avg_scaling_vec              (std::vector<double> &scalingVec, ComponentID compID, int bitDepth);
 #endif
   bool lloyd_max                    (std::vector<double>& scalingVec, std::vector<int>& quantizedVec, double& distortion, int numQuantizedLevels, int bitDepth);
   void quantize                     (std::vector<double>& scalingVec, std::vector<double>& quantizedVec, double& distortion, std::vector<double> partition, std::vector<double> codebook);
-  void extend_points                (std::vector<int>& data_x, std::vector<int>& data_y, int bitDepth);
+  void extend_points                (std::vector<int>& dataX, std::vector<int>& dataY, int bitDepth);
 
   void setEstimatedParameters       (std::vector<int>& quantizedVec, unsigned int bitDepth, ComponentID compID);
   void define_intervals_and_scalings(std::vector<std::vector<int>>& parameters, std::vector<int>& quantizedVec, int bitDepth);
