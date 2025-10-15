@@ -92,6 +92,7 @@ private:
 
   SEIObjectMaskInfos::ObjectMaskInfoHeader m_omiHeader;   ///< OMI header
   std::vector<std::vector<std::pair<uint32_t, SEIObjectMaskInfos::ObjectMaskInfo>>> m_omiMasks;
+  std::vector<uint32_t> m_auxSampleTolerance;
 
 private:
   bool  xIsNaluWithinTargetDecLayerIdSet( const InputNALUnit* nalu ) const; ///< check whether given Nalu is within targetDecLayerIdSet
@@ -122,7 +123,6 @@ private:
   void  writeLineToOutputLog(Picture * pcPic);
   void xOutputAnnotatedRegions(PicList* pcListPic);
   void xOutputObjectMaskInfos(Picture* pcPic);
-#if JVET_AK0140_PACKED_REGIONS_INFORMATION_SEI
   void xOutputPackedRegionsInfo(Picture* pcPic);
   template <typename T>
   void xOutputPackedRegionsInfoVector(FILE* fp, const char* paramName, const std::vector<T>& l)
@@ -134,7 +134,6 @@ private:
     }
     fprintf(fp, "\n");
   }
-#endif
 };
 
 //! \}

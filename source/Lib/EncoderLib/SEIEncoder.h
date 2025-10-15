@@ -107,21 +107,18 @@ public:
   void initSEIModalityInfo(SEIModalityInfo *sei);
   void initSEITextDescription(SEITextDescription *sei);
 #if JVET_AJ0151_DSC_SEI
-  void initSEIDigitallySignedContentInitialization(SEIDigitallySignedContentInitialization *sei);
+  void initSEIDigitallySignedContentInitialization(SEIDigitallySignedContentInitialization *sei, bool startFlag);
   void initSEIDigitallySignedContentSelection(SEIDigitallySignedContentSelection *sei, int substream);
-  void initSEIDigitallySignedContentVerification(SEIDigitallySignedContentVerification *sei, int32_t substream, const std::vector<uint8_t> &signature);
+  void initSEIDigitallySignedContentVerification(SEIDigitallySignedContentVerification *sei, int32_t substream, const std::vector<uint8_t> &signature, bool endFlag);
 #endif
 #if GREEN_METADATA_SEI_ENABLED
   void initSEIGreenMetadataInfo(SEIGreenMetadataInfo *sei, FeatureCounterStruct featureCounter, SEIQualityMetrics metrics, SEIComplexityMetrics greenMetadata);
 #endif
   void initSEIGenerativeFaceVideo(SEIGenerativeFaceVideo *sei, int currframeindex);
   void initSEIGenerativeFaceVideoEnhancement(SEIGenerativeFaceVideoEnhancement *sei, int currframeindex);
-#if JVET_AK0114_AI_USAGE_RESTRICTIONS_SEI
   void initSEIAIUsageRestrictions(SEIAIUsageRestrictions *sei);
-#endif 
-#if JVET_AK0140_PACKED_REGIONS_INFORMATION_SEI
   void initSEIPackedRegionsInfo(SEIPackedRegionsInfo *sei);
-#endif
+  void initSEIImageFormatMetadata(SEIImageFormatMetadata *sei);
 
 private:
   EncCfg* m_pcCfg;

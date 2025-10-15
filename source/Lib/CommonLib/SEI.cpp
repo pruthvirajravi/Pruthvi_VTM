@@ -490,12 +490,9 @@ static const std::map<SEI::PayloadType, const char *> payloadTypeStrings = {
   { SEI::PayloadType::DIGITALLY_SIGNED_CONTENT_VERIFICATION, "Digitally Signed Content Verification" },
   { SEI::PayloadType::GENERATIVE_FACE_VIDEO, "Generative face video" },
   { SEI::PayloadType::GENERATIVE_FACE_VIDEO_ENHANCEMENT, "Generative face video enhancement" },
-#if JVET_AK0114_AI_USAGE_RESTRICTIONS_SEI
   { SEI::PayloadType::AI_USAGE_RESTRICTIONS, "AI usage restrictions" },
-#endif
-#if JVET_AK0140_PACKED_REGIONS_INFORMATION_SEI
   { SEI::PayloadType::PACKED_REGIONS_INFO, "Packed regions info" },
-#endif
+  { SEI::PayloadType::IMAGE_FORMAT_METADATA, "Image format metadata" },
 };
 
 const char *SEI::getSEIMessageString(SEI::PayloadType payloadType)
@@ -536,7 +533,7 @@ SEIProcessingOrderInfo::SEIProcessingOrderInfo(const SEIProcessingOrderInfo& sei
   m_posId = sei.m_posId;
   m_posForHumanViewingIdc = sei.m_posForHumanViewingIdc;
   m_posForMachineAnalysisIdc = sei.m_posForMachineAnalysisIdc;
-  m_posNumMinus2 = sei.m_posNumMinus2;
+  m_posNumMinus1 = sei.m_posNumMinus1;
   m_posBreadthFirstFlag = sei.m_posBreadthFirstFlag;
   m_posWrappingFlag = sei.m_posWrappingFlag;
   m_posImportanceFlag = sei.m_posImportanceFlag;
@@ -545,14 +542,12 @@ SEIProcessingOrderInfo::SEIProcessingOrderInfo(const SEIProcessingOrderInfo& sei
   m_posPayloadType = sei.m_posPayloadType;
   m_posProcessingOrder = sei.m_posProcessingOrder;
   m_posPrefixByte = sei.m_posPrefixByte;
-#if JVET_AJ0105_SPO_COMPLEXITY_INFO
   m_posComplexityInfoPresentFlag = sei.m_posComplexityInfoPresentFlag;
   m_posParameterTypeIdc = sei.m_posParameterTypeIdc;
   m_posLog2ParameterBitLengthMinus3 = sei.m_posLog2ParameterBitLengthMinus3;
   m_posNumParametersIdc = sei.m_posNumParametersIdc;
   m_posNumKmacOperationIdc = sei.m_posNumKmacOperationIdc;
   m_posTotalKilobyteSize = sei.m_posTotalKilobyteSize;
-#endif
 }
 
 SEIProcessingOrderNesting::SEIProcessingOrderNesting(const SEIProcessingOrderNesting& sei)
@@ -901,11 +896,9 @@ SEIFilmGrainCharacteristics::SEIFilmGrainCharacteristics(const SEIFilmGrainChara
     m_compModel[i].intensityValues = sei.m_compModel[i].intensityValues;
   }
   m_filmGrainCharacteristicsPersistenceFlag = sei.m_filmGrainCharacteristicsPersistenceFlag;
-#if JVET_AL0339_FGS_SEI_SPATIAL_RESOLUTION
   m_spatialResolutionPresentFlag = sei.m_spatialResolutionPresentFlag;
   m_picWidthInLumaSamples = sei.m_picWidthInLumaSamples;
   m_picHeightInLumaSamples = sei.m_picHeightInLumaSamples;
-#endif
 }
 
 SEIContentLightLevelInfo::SEIContentLightLevelInfo(const SEIContentLightLevelInfo& sei)
@@ -1054,10 +1047,8 @@ SEINeuralNetworkPostFilterCharacteristics::SEINeuralNetworkPostFilterCharacteris
   m_inbandPromptFlag = sei.m_inbandPromptFlag;
   m_prompt =  sei.m_prompt;
   m_inputPicOutputFlag = sei.m_inputPicOutputFlag;
-#if JVET_AK0326_NNPF_SEED
   m_inbandSeedFlag = sei.m_inbandSeedFlag;
   m_seed = sei.m_seed;
-#endif
 }
 
 bool SEINeuralNetworkPostFilterCharacteristics::operator == (const SEINeuralNetworkPostFilterCharacteristics& sei)
@@ -1125,13 +1116,9 @@ bool SEINeuralNetworkPostFilterCharacteristics::operator == (const SEINeuralNetw
   m_inbandPromptFlag == sei.m_inbandPromptFlag  &&
   m_prompt ==  sei.m_prompt  &&
   m_inputPicOutputFlag == sei.m_inputPicOutputFlag &&
-#if JVET_AK0326_NNPF_SEED
   m_payloadLength == sei.m_payloadLength &&
   m_inbandSeedFlag == sei.m_inbandSeedFlag &&
   m_seed == sei.m_seed;
-#else
-  m_payloadLength == sei.m_payloadLength;
-#endif
 
   if (m_payloadByte && sei.m_payloadByte && m_payloadLength == sei.m_payloadLength)
   {
@@ -1155,20 +1142,12 @@ SEINeuralNetworkPostFilterActivation::SEINeuralNetworkPostFilterActivation(
   m_noPrevCLVSFlag = sei.m_noPrevCLVSFlag;
   m_noFollCLVSFlag = sei.m_noFollCLVSFlag;
   m_outputFlag = sei.m_outputFlag;
-#if JVET_AJ0104_NNPFA_PROMPT_UPDATE
   m_promptUpdateFlag = sei.m_promptUpdateFlag;
   m_prompt = sei.m_prompt;
-#endif
-#if JVET_AK0326_NNPF_SEED
   m_seedUpdateFlag = sei.m_seedUpdateFlag;
   m_seed = sei.m_seed;
-#endif
-#if JVET_AJ0114_NNPFA_NUM_PIC_SHIFT
-#if JVET_AL0075_NNPFA_SELECTED_INPUT_FLAG
   m_selectedInputFlag = sei.m_selectedInputFlag;
-#endif
   m_numInputPicShift = sei.m_numInputPicShift;
-#endif 
 }
 
 SEIPostFilterHint::SEIPostFilterHint(const SEIPostFilterHint& sei)
@@ -1237,21 +1216,13 @@ SEIEncoderOptimizationInfo::SEIEncoderOptimizationInfo(
   m_quantThresholdDelta = sei.m_quantThresholdDelta;
   m_picQuantObjectFlag = sei.m_picQuantObjectFlag;
   m_temporalResamplingTypeFlag = sei.m_temporalResamplingTypeFlag;
-#if JVET_AJ0183_EOI_SEI_SRC_PIC_FLAG
   m_srcPicFlag = sei.m_srcPicFlag;
-#endif
   m_numIntPics = sei.m_numIntPics;
   m_origPicDimensionsFlag = sei.m_origPicDimensionsFlag;
-#if JVET_AL0123_AL0310_EOI
   m_origPicWidthMinus1 = sei.m_origPicWidthMinus1;
   m_origPicHeightMinus1 = sei.m_origPicHeightMinus1;
   m_spatialHorResamplingTypeIdc = sei.m_spatialHorResamplingTypeIdc;
   m_spatialVerResamplingTypeIdc = sei.m_spatialVerResamplingTypeIdc;
-#else
-  m_origPicWidth = sei.m_origPicWidth;
-  m_origPicHeight = sei.m_origPicHeight;
-  m_spatialResamplingTypeFlag = sei.m_spatialResamplingTypeFlag;
-#endif
   m_privacyProtectionTypeIdc = sei.m_privacyProtectionTypeIdc;
   m_privacyProtectedInfoType = sei.m_privacyProtectedInfoType;
 
@@ -1281,11 +1252,13 @@ SEIGenerativeFaceVideo::SEIGenerativeFaceVideo(const SEIGenerativeFaceVideo & se
   m_nnTagURI = sei.m_nnTagURI;
   m_nnURI = sei.m_nnURI;
   m_chromaKeyInfoPresentFlag = sei.m_chromaKeyInfoPresentFlag;
+  m_chromaKeyPurposeIdc = sei.m_chromaKeyPurposeIdc;
   m_chromaKeyValuePresentFlag = sei.m_chromaKeyValuePresentFlag;
   m_chromaKeyValue = sei.m_chromaKeyValue;
   m_chromaKeyThrPresentFlag = sei.m_chromaKeyThrPresentFlag;
-  m_chromaKeyThrValue = sei.m_chromaKeyThrValue;
-  m_drivePicFusionFlag = sei.m_drivePicFusionFlag;
+  m_chromaKeyThrLower = sei.m_chromaKeyThrLower;
+  m_chromaKeyThrUpperDeltaMinus1 = sei.m_chromaKeyThrUpperDeltaMinus1;
+  m_fusionPicFlag = sei.m_fusionPicFlag;
   m_lowConfidenceFaceParameterFlag = sei.m_lowConfidenceFaceParameterFlag;
   m_coordinatePresentFlag = sei.m_coordinatePresentFlag;
   m_coordinateQuantizationFactor = sei.m_coordinateQuantizationFactor;
@@ -1316,7 +1289,6 @@ SEIGenerativeFaceVideo::SEIGenerativeFaceVideo(const SEIGenerativeFaceVideo & se
   m_matrixHeightstore = sei.m_matrixHeightstore;
 }
 
-#if  JVET_AK0114_AI_USAGE_RESTRICTIONS_SEI
 SEIAIUsageRestrictions::SEIAIUsageRestrictions(
   const SEIAIUsageRestrictions& sei)
 {
@@ -1326,8 +1298,8 @@ SEIAIUsageRestrictions::SEIAIUsageRestrictions(
   m_restrictions = sei.m_restrictions;
   m_contextPresentFlag = sei.m_contextPresentFlag;
   m_context = sei.m_context;
+  m_exclusionFlag = sei.m_exclusionFlag;
 }
-#endif
 
 SEIGenerativeFaceVideoEnhancement::SEIGenerativeFaceVideoEnhancement(const SEIGenerativeFaceVideoEnhancement & sei)
 {
@@ -1359,15 +1331,12 @@ SEIGenerativeFaceVideoEnhancement::SEIGenerativeFaceVideoEnhancement(const SEIGe
   m_pupilRightEyeCoordinateY = sei.m_pupilRightEyeCoordinateY;
 }
 
-#if JVET_AK0140_PACKED_REGIONS_INFORMATION_SEI
 SEIPackedRegionsInfo::SEIPackedRegionsInfo(SEIPackedRegionsInfo& sei)
 {
   m_cancelFlag = sei.m_cancelFlag;
   m_persistenceFlag = sei.m_persistenceFlag;
   m_numRegionsMinus1 = sei.m_numRegionsMinus1;
-#if JVET_AL0324_AL0070_PRI_SEI
   m_multilayerFlag = sei.m_multilayerFlag;
-#endif
   m_useMaxDimensionsFlag = sei.m_useMaxDimensionsFlag;
   m_log2UnitSize = sei.m_log2UnitSize;
   m_regionSizeLenMinus1 = sei.m_regionSizeLenMinus1;
@@ -1382,21 +1351,27 @@ SEIPackedRegionsInfo::SEIPackedRegionsInfo(SEIPackedRegionsInfo& sei)
   m_resamplingHeightNumMinus1 = sei.m_resamplingHeightNumMinus1;
   m_resamplingHeightDenomMinus1 = sei.m_resamplingHeightDenomMinus1;
   m_regionId = sei.m_regionId;
-#if JVET_AL0324_AL0070_PRI_SEI
   m_regionLayerId = sei.m_regionLayerId;
   m_regionIsALayerFlag = sei.m_regionIsALayerFlag;
-#endif
   m_regionTopLeftInUnitsX = sei.m_regionTopLeftInUnitsX;
   m_regionTopLeftInUnitsY = sei.m_regionTopLeftInUnitsY;
   m_regionWidthInUnitsMinus1 = sei.m_regionWidthInUnitsMinus1;
   m_regionHeightInUnitsMinus1 = sei.m_regionHeightInUnitsMinus1;
   m_resamplingRatioIdx = sei.m_resamplingRatioIdx;
-#if JVET_AL0324_AL0070_PRI_SEI
   m_targetRegionTopLeftInUnitsX = sei.m_targetRegionTopLeftInUnitsX;
   m_targetRegionTopLeftInUnitsY = sei.m_targetRegionTopLeftInUnitsY;
-#else
-  m_targetRegionTopLeftX = sei.m_targetRegionTopLeftX;
-  m_targetRegionTopLeftY = sei.m_targetRegionTopLeftY;
-#endif
 }
-#endif
+
+SEIImageFormatMetadata::SEIImageFormatMetadata(const SEIImageFormatMetadata& sei)
+{
+  m_persistenceFlag      = sei.m_persistenceFlag;
+  m_cancelFlag           = sei.m_cancelFlag;
+  m_numMetadataPayloads  = sei.m_numMetadataPayloads;
+  for(int i = 0;i<m_numMetadataPayloads;i++)
+  {
+    m_typeId[i]          = sei.m_typeId[i]; 
+    m_uriPresentFlag[i]  = sei.m_uriPresentFlag[i]; 
+    m_dataPayloadByte[i] = sei.m_dataPayloadByte[i]; 
+    m_dataUri[i]         = sei.m_dataUri[i]; 
+  }
+}

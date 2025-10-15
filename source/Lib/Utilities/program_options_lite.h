@@ -61,7 +61,6 @@ template<class T> inline std::istream& operator>>(std::istream& in, std::optiona
 template <class T>
 struct SMultiValueInput
 {
-  static_assert(!std::is_same<T, uint8_t>::value, "SMultiValueInput<uint8_t> is not supported");
   static_assert(!std::is_same<T, int8_t>::value, "SMultiValueInput<int8_t> is not supported");
   const T              minValIncl;
   const T              maxValIncl;
