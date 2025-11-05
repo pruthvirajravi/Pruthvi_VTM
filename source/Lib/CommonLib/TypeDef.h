@@ -56,7 +56,7 @@
 
 //########### place macros to be removed in next cycle below this line ###############
 #define JVET_AN0237_FILM_GRAIN_ANALYSIS                   1 // film grain analysis improvements
-
+#define JVET_AN0348                                       1
 
 //########### place macros to be be kept below this line ###############
 
