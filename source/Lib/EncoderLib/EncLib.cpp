@@ -1879,7 +1879,11 @@ void EncLib::xInitPPS(PPS &pps, const SPS &sps)
     useDeltaQp = (getBaseQP() < 38) && (getSourceWidth() > 512 || getSourceHeight() > 320);
   }
 #endif
+#if BIM_IMPROVEMENT_FROM_JVET_AN0267
+  if (m_bimEnabled == 1)
+#else
   if (m_bimEnabled)
+#endif
   {
     useDeltaQp = true;
   }

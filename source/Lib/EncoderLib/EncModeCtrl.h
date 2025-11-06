@@ -133,12 +133,21 @@ struct EncTestMode
     : type( _type       ), opts( ETO_STANDARD ), qp( -1  ) {}
   EncTestMode( EncTestModeType _type, int _qp )
     : type( _type       ), opts( ETO_STANDARD ), qp( _qp ) {}
+#if BIM_IMPROVEMENT_FROM_JVET_AN0267
+  EncTestMode(EncTestModeType _type, EncTestModeOpts _opts, int _qp, double _deltaQPForLambda)
+    : type(_type), opts(_opts), qp(_qp), deltaQPForLambda(_deltaQPForLambda)
+  {}
+#else
   EncTestMode( EncTestModeType _type, EncTestModeOpts _opts, int _qp )
     : type( _type       ), opts( _opts        ), qp( _qp ) {}
+#endif
 
   EncTestModeType type;
   EncTestModeOpts opts;
   int             qp;
+#if BIM_IMPROVEMENT_FROM_JVET_AN0267
+  double          deltaQPForLambda = 0;
+#endif
   double          maxCostAllowed;
 
   AmvrSearchMode getAmvrSearchMode() const { return AmvrSearchMode((opts & ETO_IMV) >> ETO_IMV_SHIFT); }
@@ -188,9 +197,13 @@ inline PartSplit getPartSplit( const EncTestMode& encTestmode )
 
 inline EncTestMode getCSEncMode( const CodingStructure& cs )
 {
-  return EncTestMode( EncTestModeType( (unsigned)cs.features[ENC_FT_ENC_MODE_TYPE] ),
-                      EncTestModeOpts( (unsigned)cs.features[ENC_FT_ENC_MODE_OPTS] ),
-                      false);
+  return EncTestMode(EncTestModeType((unsigned) cs.features[ENC_FT_ENC_MODE_TYPE]),
+                     EncTestModeOpts((unsigned) cs.features[ENC_FT_ENC_MODE_OPTS]),
+#if BIM_IMPROVEMENT_FROM_JVET_AN0267
+                     0, 0.0);
+#else
+                     false);
+#endif
 }
 
 
@@ -284,7 +297,11 @@ protected:
   int                   m_lumaLevelToDeltaQPLUT[LUMA_LEVEL_TO_DQP_LUT_MAXSIZE];
   int                   m_lumaQPOffset;
 #endif
+#if BIM_IMPROVEMENT_FROM_JVET_AN0267
+  std::map<int, double*>* m_bimQPMap;
+#else
   std::map<int, int*>  *m_bimQPMap;
+#endif
   bool                  m_fastDeltaQP;
   static_vector<ComprCUCtx, ( MAX_CU_DEPTH << 2 )> m_ComprCUCtxList;
   InterSearch*          m_pcInterSearch;
@@ -392,12 +409,21 @@ public:
   void setInterSearch                 (InterSearch* pcInterSearch)   { m_pcInterSearch = pcInterSearch; }
   void   setPltEnc                    ( bool b )                { m_doPlt = b; }
   bool   getPltEnc()                                      const { return m_doPlt; }
+#if BIM_IMPROVEMENT_FROM_JVET_AN0267
+  void   setBIMQPMap                  ( std::map<int, double*> *qpMap ) { m_bimQPMap = qpMap; }
+  double getBIMOffset                 ( int poc, int ctuId )
+  {
+    auto it = m_bimQPMap->find(poc);
+    return (it == m_bimQPMap->end()) ? 0 : (*m_bimQPMap)[poc][ctuId];
+  }
+#else
   void   setBIMQPMap                  ( std::map<int, int*> *qpMap ) { m_bimQPMap = qpMap; }
   int    getBIMOffset                 ( int poc, int ctuId )
   {
     auto it = m_bimQPMap->find(poc);
     return (it == m_bimQPMap->end()) ? 0 : (*m_bimQPMap)[poc][ctuId];
   }
+#endif
 
   void setQpCtu                       ( int qp )                     { m_qpCtu = qp; }
   void setCurrCsArea                  ( const UnitArea &currCsArea ) { m_currCsArea = &currCsArea; }
@@ -617,7 +643,12 @@ void forceRemoveQT()
 
 protected:
   void xExtractFeatures ( const EncTestMode encTestmode, CodingStructure& cs );
-  void xGetMinMaxQP     ( int& iMinQP, int& iMaxQP, const CodingStructure& cs, const Partitioner &pm, const int baseQP, const SPS& sps, const PPS& pps, const PartSplit splitMode );
+  void xGetMinMaxQP(int& iMinQP, int& iMaxQP,
+#if BIM_IMPROVEMENT_FROM_JVET_AN0267
+                    double& deltaQPForLambda,
+#endif
+                    const CodingStructure& cs, const Partitioner& pm, const int baseQP, const SPS& sps, const PPS& pps,
+                    const PartSplit splitMode);
   int  xComputeDQP      ( const CodingStructure &cs, const Partitioner &pm );
 };
 

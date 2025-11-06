@@ -1676,6 +1676,9 @@ void EncApp::xInitLibCfg( int layerIdx )
 
   m_cEncLib.setGopBasedTemporalFilterEnabled(m_gopBasedTemporalFilterEnabled);
   m_cEncLib.setBIM                                               ( m_bimEnabled );
+#if BIM_IMPROVEMENT_FROM_JVET_AN0267
+  m_cEncLib.setBIMUnitSize                                       (m_bimUnitSize);
+#endif
   m_cEncLib.setNumRefLayers                                       ( m_numRefLayers );
 
   m_cEncLib.setVPSParameters(m_cfgVPSParameters);
@@ -1877,7 +1880,11 @@ void EncApp::createLib( const int layerIdx )
   }
   if ( m_bimEnabled )
   {
+#if BIM_IMPROVEMENT_FROM_JVET_AN0267
+    std::map<int, double*> adaptQPmap;
+#else
     std::map<int, int*> adaptQPmap;
+#endif
     m_cEncLib.setAdaptQPmap(adaptQPmap);
   }
 
@@ -1910,24 +1917,36 @@ void EncApp::createLib( const int layerIdx )
 
   if( m_gopBasedTemporalFilterEnabled || m_bimEnabled )
   {
-    m_cEncLib.getTemporalFilter().init(m_frameSkip, m_inputBitDepth, m_msbExtendedBitDepth, m_internalBitDepth, m_sourceWidth,
-                          sourceHeight, m_sourcePadding, m_clipInputVideoToRec709Range, m_inputFileName,
-                          m_chromaFormatIdc, m_sourceWidthBeforeScale, m_sourceHeightBeforeScale,
-                          m_horCollocatedChromaFlag, m_verCollocatedChromaFlag,
-                          m_inputColourSpaceConvert, m_iQP, m_gopBasedTemporalFilterStrengths,
-                          m_gopBasedTemporalFilterPastRefs, m_gopBasedTemporalFilterFutureRefs, m_firstValidFrame,
-                          m_lastValidFrame, m_gopBasedTemporalFilterEnabled, m_cEncLib.getAdaptQPmap(),
-                          m_cEncLib.getBIM(), m_ctuSize);
+    m_cEncLib.getTemporalFilter().init(
+      m_frameSkip, m_inputBitDepth, m_msbExtendedBitDepth, m_internalBitDepth, m_sourceWidth, sourceHeight,
+      m_sourcePadding, m_clipInputVideoToRec709Range, m_inputFileName, m_chromaFormatIdc, m_sourceWidthBeforeScale,
+      m_sourceHeightBeforeScale,
+      m_horCollocatedChromaFlag, m_verCollocatedChromaFlag,
+      m_inputColourSpaceConvert, m_iQP, m_gopBasedTemporalFilterStrengths, m_gopBasedTemporalFilterPastRefs,
+      m_gopBasedTemporalFilterFutureRefs, m_firstValidFrame, m_lastValidFrame, m_gopBasedTemporalFilterEnabled,
+#if TF_IMPROVEMENT_FROM_JVET_AN0267
+      m_gopBasedTemporalFilterUnitSize,
+#endif
+#if BIM_IMPROVEMENT_FROM_JVET_AN0267
+      m_cEncLib.getAdaptQPmap(), m_cEncLib.getBIM(), m_bimUnitSize);
+#else
+      m_cEncLib.getAdaptQPmap(), m_cEncLib.getBIM(), m_ctuSize);
+#endif
+
   }
   if ( m_fgcSEIAnalysisEnabled && m_fgcSEIExternalDenoised.empty() )
   {
-    m_cEncLib.getTemporalFilterForFG().init(m_frameSkip, m_inputBitDepth, m_msbExtendedBitDepth, m_internalBitDepth, m_sourceWidth,
-                               sourceHeight, m_sourcePadding, m_clipInputVideoToRec709Range, m_inputFileName,
-                               m_chromaFormatIdc, m_sourceWidthBeforeScale, m_sourceHeightBeforeScale,
-                               m_horCollocatedChromaFlag, m_verCollocatedChromaFlag,
-                               m_inputColourSpaceConvert, m_iQP, m_fgcSEITemporalFilterStrengths,
-                               m_fgcSEITemporalFilterPastRefs, m_fgcSEITemporalFilterFutureRefs, m_firstValidFrame,
-                               m_lastValidFrame, true, m_cEncLib.getAdaptQPmap(), m_cEncLib.getBIM(), m_ctuSize);
+    m_cEncLib.getTemporalFilterForFG().init(
+      m_frameSkip, m_inputBitDepth, m_msbExtendedBitDepth, m_internalBitDepth, m_sourceWidth, sourceHeight,
+      m_sourcePadding, m_clipInputVideoToRec709Range, m_inputFileName, m_chromaFormatIdc, m_sourceWidthBeforeScale,
+      m_sourceHeightBeforeScale,
+      m_horCollocatedChromaFlag, m_verCollocatedChromaFlag,
+      m_inputColourSpaceConvert, m_iQP, m_fgcSEITemporalFilterStrengths, m_fgcSEITemporalFilterPastRefs,
+      m_fgcSEITemporalFilterFutureRefs, m_firstValidFrame, m_lastValidFrame, true,
+#if TF_IMPROVEMENT_FROM_JVET_AN0267
+      m_gopBasedTemporalFilterUnitSize,
+#endif
+      m_cEncLib.getAdaptQPmap(), m_cEncLib.getBIM(), m_ctuSize);
   }
 }
 
@@ -1979,7 +1998,7 @@ void EncApp::destroyLib()
     auto map = m_cEncLib.getAdaptQPmap();
     for (auto it = map->begin(); it != map->end(); ++it)
     {
-      int *p = it->second;
+      auto *p = it->second;
       delete p;
     }
   }

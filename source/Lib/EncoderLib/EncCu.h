@@ -285,13 +285,18 @@ private:
   static const MergeIdxPair m_geoModeTest[GEO_MAX_NUM_CANDS];
 
 #if SHARP_LUMA_DELTA_QP || ENABLE_QPA_SUB_CTU
-  void    updateLambda      ( Slice* slice, const int dQP,
- #if WCG_EXT && ER_CHROMA_QP_WCG_PPS
-                              const bool useWCGChromaControl,
- #endif
-                              const bool updateRdCostLambda );
+  void updateLambda(Slice* slice,
+#if BIM_IMPROVEMENT_FROM_JVET_AN0267
+                    const double dQP,
+#else
+                    const int dQP,
 #endif
-  double                m_sbtCostSave[2];
+#if WCG_EXT && ER_CHROMA_QP_WCG_PPS
+                    const bool useWCGChromaControl,
+#endif
+                    const bool updateRdCostLambda);
+#endif
+  double m_sbtCostSave[2];
 
   GeoComboCostList m_comboList;
   MergeItemList         m_mergeItemList;
