@@ -59,6 +59,8 @@
 
 #define JVET_AN0058          1                       // JVET-AN0058: On the NNPF SEI messages
 
+#define JVET_AM0060_OMI_SAMPLE_RANGE_FIX 1           // JVET-AN0060: On the OMI SEI message
+
 //########### place macros to be be kept below this line ###############
 
 #ifndef JVET_AJ0151_DSC_SEI
