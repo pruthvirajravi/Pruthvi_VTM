@@ -5282,6 +5282,9 @@ void SEIReader::xParseSEIAIUsageRestrictions(SEIAIUsageRestrictions& sei, uint32
     {
       sei_read_uvlc(pDecodedMessageOutputStream, val, "aur_restriction");
       sei.m_restrictions[i] = val;
+#if JVET_AN0062_GENERATIVE_AUR_RESTRICTIONS
+      CHECK(sei.m_restrictions[i] > MAX_AUR_RESTRICTION, "aur_restriction shall be in the range of 0 to 5, inclusive");
+#endif
       sei_read_flag(pDecodedMessageOutputStream, val, "aur_context_present_flag");
       sei.m_contextPresentFlag[i] = val;
       if (sei.m_contextPresentFlag[i])
