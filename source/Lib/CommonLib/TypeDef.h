@@ -57,6 +57,8 @@
 //########### place macros to be removed in next cycle below this line ###############
 #define JVET_AN0348          1
 
+#define JVET_AN0058          1                       // JVET-AN0058: On the NNPF SEI messages
+
 //########### place macros to be be kept below this line ###############
 
 #ifndef JVET_AJ0151_DSC_SEI
