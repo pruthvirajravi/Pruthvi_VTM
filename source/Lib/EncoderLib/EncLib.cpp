@@ -688,7 +688,7 @@ bool EncLib::encodePrep(bool flush, PelStorage *pcPicYuvOrg, const InputColourSp
     const PPS *pps = m_ppsMap.getPS( 2 );
     const SPS *sps = m_spsMap.getPS( pps->getSPSId() );
 
-    picCurr->M_BUFS( 0, PIC_ORIGINAL ).copyFrom( m_cGOPEncoder.getPicBg()->getRecoBuf() );
+    picCurr->m_bufs[PIC_ORIGINAL].copyFrom( m_cGOPEncoder.getPicBg()->getRecoBuf() );
     picCurr->finalInit( m_vps, *sps, *pps, &m_picHeader, m_apss, m_lmcsAPS, m_scalinglistAPS );
     picCurr->poc = m_pocLast - 1;
     m_pocLast -= 2;
@@ -914,16 +914,16 @@ bool EncLib::encodePrep(bool flush, PelStorage *pcPicYuvOrg, const InputColourSp
     {
       if (encPic == pcPicYuvOrg)
       {
-        pcPicCurr->M_BUFS(0, PIC_ORIGINAL).copyFrom(*encPic);
+        pcPicCurr->m_bufs[PIC_ORIGINAL].copyFrom(*encPic);
       }
       else
       {
-        pcPicCurr->M_BUFS(0, PIC_ORIGINAL).swap(*encPic);
+        pcPicCurr->m_bufs[PIC_ORIGINAL].swap(*encPic);
       }
     }
 
     // fill PIC_TRUE_ORIGINAL_INPUT
-    pcPicCurr->M_BUFS( 0, PIC_TRUE_ORIGINAL_INPUT ).swap( *pcPicYuvOrg );
+    pcPicCurr->m_bufs[PIC_TRUE_ORIGINAL_INPUT].swap( *pcPicYuvOrg );
 
     pcPicCurr->finalInit( m_vps, *pSPS, *pPPS, &m_picHeader, m_apss, m_lmcsAPS, m_scalinglistAPS );
 

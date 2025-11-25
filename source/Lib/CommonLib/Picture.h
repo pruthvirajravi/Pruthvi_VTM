@@ -59,8 +59,6 @@ class AQpLayer;
 
 typedef std::list<SEI*> SEIMessages;
 
-#define M_BUFS(JID,PID) m_bufs[PID]
-
 #if GDR_ENABLED
 struct GdrPicParam
 {

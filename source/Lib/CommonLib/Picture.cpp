@@ -86,22 +86,22 @@ void Picture::create(const bool useWrapAround, const ChromaFormat& _chromaFormat
   margin            =  MAX_SCALING_RATIO*_margin;
   const Area area   = Area( Position(), size );
   const Area full   = Area( Position(), fullSize.value_or( size ) );
-  M_BUFS( 0, PIC_RECONSTRUCTION ).create( _chromaFormat, area, _maxCUSize, margin, MEMORY_ALIGN_DEF_SIZE );
+  m_bufs[PIC_RECONSTRUCTION].create( _chromaFormat, area, _maxCUSize, margin, MEMORY_ALIGN_DEF_SIZE );
 
   if (useWrapAround)
   {
-    M_BUFS(0, PIC_RECON_WRAP).create(_chromaFormat, area, _maxCUSize, margin, MEMORY_ALIGN_DEF_SIZE);
+    m_bufs[PIC_RECON_WRAP].create(_chromaFormat, area, _maxCUSize, margin, MEMORY_ALIGN_DEF_SIZE);
   }
 
   if (enablePostFilteringForHFR)
   {
-    M_BUFS(0, PIC_YUV_POST_REC).create(_chromaFormat, area, _maxCUSize, margin, MEMORY_ALIGN_DEF_SIZE);
+    m_bufs[PIC_YUV_POST_REC].create(_chromaFormat, area, _maxCUSize, margin, MEMORY_ALIGN_DEF_SIZE);
   }
 
   if( !_decoder )
   {
-    M_BUFS( 0, PIC_ORIGINAL ).            create( _chromaFormat, area );
-    M_BUFS( 0, PIC_TRUE_ORIGINAL_INPUT ). create( _chromaFormat, full );
+    m_bufs[PIC_ORIGINAL].            create( _chromaFormat, area );
+    m_bufs[PIC_TRUE_ORIGINAL_INPUT]. create( _chromaFormat, full );
   }
 #if !KEEP_PRED_AND_RESI_SIGNALS
   m_ctuArea = UnitArea( _chromaFormat, Area( Position{ 0, 0 }, Size( _maxCUSize, _maxCUSize ) ) );
@@ -113,7 +113,7 @@ void Picture::destroy()
 {
   for (uint32_t t = 0; t < NUM_PIC_TYPES; t++)
   {
-    M_BUFS(jId, t).destroy();
+    m_bufs[t].destroy();
   }
   m_hashMap.clearAll();
   if (cs)
@@ -158,20 +158,20 @@ void Picture::createTempBuffers( const unsigned _maxCUSize, bool useFilterFrame,
   const Area ctuArea = m_ctuArea.Y();
 #endif
 
-  M_BUFS( jId, PIC_PREDICTION ).create( chromaFormat, ctuArea, _maxCUSize );
-  M_BUFS( jId, PIC_RESIDUAL   ).create( chromaFormat, ctuArea, _maxCUSize );
+  m_bufs[PIC_PREDICTION].create( chromaFormat, ctuArea, _maxCUSize );
+  m_bufs[PIC_RESIDUAL  ].create( chromaFormat, ctuArea, _maxCUSize );
 
   if (!decoder)
   {
     const Area picArea(Position{ 0, 0 }, lumaSize());
-    M_BUFS(jId, PIC_TRUE_ORIGINAL).create(chromaFormat, picArea, _maxCUSize);
+    m_bufs[PIC_TRUE_ORIGINAL].create(chromaFormat, picArea, _maxCUSize);
     if (useFilterFrame)
     {
-      M_BUFS(jId, PIC_FILTERED_ORIGINAL).create(chromaFormat, picArea, _maxCUSize);
+      m_bufs[PIC_FILTERED_ORIGINAL].create(chromaFormat, picArea, _maxCUSize);
     }
     if (isFgFiltered)
     {
-      M_BUFS(jId, PIC_FILTERED_ORIGINAL_FG).create(chromaFormat, picArea, _maxCUSize);
+      m_bufs[PIC_FILTERED_ORIGINAL_FG].create(chromaFormat, picArea, _maxCUSize);
     }
   }
 
@@ -192,7 +192,7 @@ void Picture::destroyTempBuffers()
     case PIC_FILTERED_ORIGINAL:
     case PIC_TRUE_ORIGINAL:
     case PIC_FILTERED_ORIGINAL_FG:
-      M_BUFS(0, t).destroy();
+      m_bufs[t].destroy();
     default:;
     }
   }
@@ -207,20 +207,20 @@ void Picture::destroyTempBuffers()
 const CPelBuf     Picture::getOrigBuf(const CompArea &blk)  const { return getBuf(blk,  PIC_ORIGINAL); }
        PelUnitBuf Picture::getOrigBuf(const UnitArea &unit)       { return getBuf(unit, PIC_ORIGINAL); }
 const CPelUnitBuf Picture::getOrigBuf(const UnitArea &unit) const { return getBuf(unit, PIC_ORIGINAL); }
-       PelUnitBuf Picture::getOrigBuf()                           { return M_BUFS(0,    PIC_ORIGINAL); }
-const CPelUnitBuf Picture::getOrigBuf()                     const { return M_BUFS(0,    PIC_ORIGINAL); }
+       PelUnitBuf Picture::getOrigBuf()                           { return m_bufs[PIC_ORIGINAL]; }
+const CPelUnitBuf Picture::getOrigBuf()                     const { return m_bufs[PIC_ORIGINAL]; }
 
        PelBuf     Picture::getOrigBuf(const ComponentID compID)       { return getBuf(compID, PIC_ORIGINAL); }
 const CPelBuf     Picture::getOrigBuf(const ComponentID compID) const { return getBuf(compID, PIC_ORIGINAL); }
        PelBuf     Picture::getTrueOrigBuf(const ComponentID compID)       { return getBuf(compID, PIC_TRUE_ORIGINAL); }
 const CPelBuf     Picture::getTrueOrigBuf(const ComponentID compID) const { return getBuf(compID, PIC_TRUE_ORIGINAL); }
-       PelUnitBuf Picture::getTrueOrigBuf()                           { return M_BUFS(0, PIC_TRUE_ORIGINAL); }
-const CPelUnitBuf Picture::getTrueOrigBuf()                     const { return M_BUFS(0, PIC_TRUE_ORIGINAL); }
+       PelUnitBuf Picture::getTrueOrigBuf()                           { return m_bufs[PIC_TRUE_ORIGINAL]; }
+const CPelUnitBuf Picture::getTrueOrigBuf()                     const { return m_bufs[PIC_TRUE_ORIGINAL]; }
        PelBuf     Picture::getTrueOrigBuf(const CompArea &blk)        { return getBuf(blk, PIC_TRUE_ORIGINAL); }
 const CPelBuf     Picture::getTrueOrigBuf(const CompArea &blk)  const { return getBuf(blk, PIC_TRUE_ORIGINAL); }
 
-       PelUnitBuf Picture::getFilteredOrigBuf()                           { return M_BUFS(0, PIC_FILTERED_ORIGINAL); }
-const CPelUnitBuf Picture::getFilteredOrigBuf()                     const { return M_BUFS(0, PIC_FILTERED_ORIGINAL); }
+       PelUnitBuf Picture::getFilteredOrigBuf()                           { return m_bufs[PIC_FILTERED_ORIGINAL]; }
+const CPelUnitBuf Picture::getFilteredOrigBuf()                     const { return m_bufs[PIC_FILTERED_ORIGINAL]; }
        PelBuf     Picture::getFilteredOrigBuf(const CompArea &blk)        { return getBuf(blk, PIC_FILTERED_ORIGINAL); }
 const CPelBuf     Picture::getFilteredOrigBuf(const CompArea &blk)  const { return getBuf(blk, PIC_FILTERED_ORIGINAL); }
 
@@ -234,17 +234,17 @@ const CPelBuf     Picture::getResiBuf(const CompArea &blk)  const { return getBu
        PelUnitBuf Picture::getResiBuf(const UnitArea &unit)       { return getBuf(unit, PIC_RESIDUAL); }
 const CPelUnitBuf Picture::getResiBuf(const UnitArea &unit) const { return getBuf(unit, PIC_RESIDUAL); }
 
-       PelBuf     Picture::getRecoBuf(const ComponentID compID, bool wrap)       { return getBuf(compID,                    wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
-const CPelBuf     Picture::getRecoBuf(const ComponentID compID, bool wrap) const { return getBuf(compID,                    wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
-       PelBuf     Picture::getRecoBuf(const CompArea &blk, bool wrap)            { return getBuf(blk,                       wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
-const CPelBuf     Picture::getRecoBuf(const CompArea &blk, bool wrap)      const { return getBuf(blk,                       wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
-       PelUnitBuf Picture::getRecoBuf(const UnitArea &unit, bool wrap)           { return getBuf(unit,                      wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
-const CPelUnitBuf Picture::getRecoBuf(const UnitArea &unit, bool wrap)     const { return getBuf(unit,                      wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
-       PelUnitBuf Picture::getRecoBuf(bool wrap)                                 { return M_BUFS(scheduler.getSplitPicId(), wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
-const CPelUnitBuf Picture::getRecoBuf(bool wrap)                           const { return M_BUFS(scheduler.getSplitPicId(), wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
+       PelBuf     Picture::getRecoBuf(const ComponentID compID, bool wrap)       { return getBuf(compID, wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
+const CPelBuf     Picture::getRecoBuf(const ComponentID compID, bool wrap) const { return getBuf(compID, wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
+       PelBuf     Picture::getRecoBuf(const CompArea &blk, bool wrap)            { return getBuf(blk,    wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
+const CPelBuf     Picture::getRecoBuf(const CompArea &blk, bool wrap)      const { return getBuf(blk,    wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
+       PelUnitBuf Picture::getRecoBuf(const UnitArea &unit, bool wrap)           { return getBuf(unit,   wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
+const CPelUnitBuf Picture::getRecoBuf(const UnitArea &unit, bool wrap)     const { return getBuf(unit,   wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION); }
+       PelUnitBuf Picture::getRecoBuf(bool wrap)                                 { return m_bufs[        wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION]; }
+const CPelUnitBuf Picture::getRecoBuf(bool wrap)                           const { return m_bufs[        wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION]; }
 
-       PelUnitBuf Picture::getPostRecBuf()                           { return M_BUFS(scheduler.getSplitPicId(), PIC_YUV_POST_REC); }
-const CPelUnitBuf Picture::getPostRecBuf()                     const { return M_BUFS(scheduler.getSplitPicId(), PIC_YUV_POST_REC); }
+       PelUnitBuf Picture::getPostRecBuf()                           { return m_bufs[PIC_YUV_POST_REC]; }
+const CPelUnitBuf Picture::getPostRecBuf()                     const { return m_bufs[PIC_YUV_POST_REC]; }
 
 void Picture::finalInit( const VPS* vps, const SPS& sps, const PPS& pps, PicHeader *picHeader, APS** alfApss, APS* lmcsAps, APS* scalingListAps )
 {
@@ -868,7 +868,7 @@ void Picture::saveSubPicBorder(int POC, int subPicX0, int subPicY0, int subPicWi
 
 
     // 3.1.1 set reconstructed picture
-    PelBuf s = M_BUFS(0, PIC_RECONSTRUCTION).get(compID);
+    PelBuf s = m_bufs[PIC_RECONSTRUCTION].get(compID);
     Pel *src = s.bufAt(left, top);
 
     // 3.2.1 set back up buffer for left
@@ -909,7 +909,7 @@ void Picture::saveSubPicBorder(int POC, int subPicX0, int subPicY0, int subPicWi
     // back up recon wrap buffer
     if (cs->sps->getWrapAroundEnabledFlag())
     {
-      PelBuf sWrap = M_BUFS(0, PIC_RECON_WRAP).get(compID);
+      PelBuf sWrap = m_bufs[PIC_RECON_WRAP].get(compID);
       Pel *srcWrap = sWrap.bufAt(left, top);
 
       // 3.4.1 set back up buffer for above
@@ -952,7 +952,7 @@ void Picture::extendSubPicBorder(int POC, int subPicX0, int subPicY0, int subPic
     int height = subPicHeight >> getComponentScaleY(compID, cs->area.chromaFormat);
 
     // 3.1 set reconstructed picture
-    PelBuf s = M_BUFS(0, PIC_RECONSTRUCTION).get(compID);
+    PelBuf s = m_bufs[PIC_RECONSTRUCTION].get(compID);
     Pel *src = s.bufAt(left, top);
 
     // 4.1 apply padding for left and right
@@ -1000,7 +1000,7 @@ void Picture::extendSubPicBorder(int POC, int subPicX0, int subPicY0, int subPic
     if (cs->sps->getWrapAroundEnabledFlag())
     {
       // set recon wrap picture
-      PelBuf sWrap = M_BUFS(0, PIC_RECON_WRAP).get(compID);
+      PelBuf sWrap = m_bufs[PIC_RECON_WRAP].get(compID);
       Pel *srcWrap = sWrap.bufAt(left, top);
 
       // apply padding on bottom
@@ -1045,7 +1045,7 @@ void Picture::restoreSubPicBorder(int POC, int subPicX0, int subPicY0, int subPi
     int height = subPicHeight >> getComponentScaleY(compID, cs->area.chromaFormat);
 
     // 3.1 set reconstructed picture
-    PelBuf s = M_BUFS(0, PIC_RECONSTRUCTION).get(compID);
+    PelBuf s = m_bufs[PIC_RECONSTRUCTION].get(compID);
     Pel *src = s.bufAt(left, top);
 
     // 4.2.1 copy from back up buffer to recon picture
@@ -1090,7 +1090,7 @@ void Picture::restoreSubPicBorder(int POC, int subPicX0, int subPicY0, int subPi
     if (cs->sps->getWrapAroundEnabledFlag())
     {
       // set recon wrap picture
-      PelBuf sWrap = M_BUFS(0, PIC_RECON_WRAP).get(compID);
+      PelBuf sWrap = m_bufs[PIC_RECON_WRAP].get(compID);
       Pel *srcWrap = sWrap.bufAt(left, top);
 
       // set back up buffer for above
@@ -1136,7 +1136,7 @@ void Picture::extendPicBorder( const SPS *sps, const PPS *pps )
   for(int comp=0; comp<getNumberValidComponents( cs->area.chromaFormat ); comp++)
   {
     ComponentID compID = ComponentID( comp );
-    PelBuf p = M_BUFS( 0, PIC_RECONSTRUCTION ).get( compID );
+    PelBuf p = m_bufs[PIC_RECONSTRUCTION].get( compID );
     Pel *piTxt = p.bufAt(0,0);
     int xmargin = margin >> getComponentScaleX( compID, cs->area.chromaFormat );
     int ymargin = margin >> getComponentScaleY( compID, cs->area.chromaFormat );
@@ -1189,8 +1189,8 @@ void Picture::extendWrapBorder( const PPS *pps )
   for(int comp=0; comp<getNumberValidComponents( cs->area.chromaFormat ); comp++)
   {
     ComponentID compID = ComponentID( comp );
-    PelBuf p = M_BUFS( 0, PIC_RECON_WRAP ).get( compID );
-    p.copyFrom(M_BUFS( 0, PIC_RECONSTRUCTION ).get( compID ));
+    PelBuf p = m_bufs[PIC_RECON_WRAP].get( compID );
+    p.copyFrom(m_bufs[PIC_RECONSTRUCTION].get( compID ));
     Pel *piTxt = p.bufAt(0,0);
     int xmargin = margin >> getComponentScaleX( compID, cs->area.chromaFormat );
     int ymargin = margin >> getComponentScaleY( compID, cs->area.chromaFormat );
@@ -1230,12 +1230,12 @@ void Picture::extendWrapBorder( const PPS *pps )
 
 PelBuf Picture::getBuf( const ComponentID compID, const PictureType &type )
 {
-  return M_BUFS( ( type == PIC_ORIGINAL || type == PIC_TRUE_ORIGINAL || type == PIC_FILTERED_ORIGINAL || type == PIC_TRUE_ORIGINAL_INPUT ) ? 0 : scheduler.getSplitPicId(), type ).getBuf( compID );
+  return m_bufs[type].getBuf( compID );
 }
 
 const CPelBuf Picture::getBuf( const ComponentID compID, const PictureType &type ) const
 {
-  return M_BUFS( ( type == PIC_ORIGINAL || type == PIC_TRUE_ORIGINAL || type == PIC_FILTERED_ORIGINAL || type == PIC_TRUE_ORIGINAL_INPUT ) ? 0 : scheduler.getSplitPicId(), type ).getBuf( compID );
+  return m_bufs[type].getBuf( compID );
 }
 
 PelBuf Picture::getBuf( const CompArea &blk, const PictureType &type )
@@ -1252,11 +1252,11 @@ PelBuf Picture::getBuf( const CompArea &blk, const PictureType &type )
     localBlk.x &= ( cs->pcv->maxCUWidthMask  >> getComponentScaleX( blk.compID, blk.chromaFormat ) );
     localBlk.y &= ( cs->pcv->maxCUHeightMask >> getComponentScaleY( blk.compID, blk.chromaFormat ) );
 
-    return M_BUFS( jId, type ).getBuf( localBlk );
+    return m_bufs[type].getBuf( localBlk );
   }
 #endif
 
-  return M_BUFS( jId, type ).getBuf( blk );
+  return m_bufs[type].getBuf( blk );
 }
 
 const CPelBuf Picture::getBuf( const CompArea &blk, const PictureType &type ) const
@@ -1273,11 +1273,11 @@ const CPelBuf Picture::getBuf( const CompArea &blk, const PictureType &type ) co
     localBlk.x &= ( cs->pcv->maxCUWidthMask  >> getComponentScaleX( blk.compID, blk.chromaFormat ) );
     localBlk.y &= ( cs->pcv->maxCUHeightMask >> getComponentScaleY( blk.compID, blk.chromaFormat ) );
 
-    return M_BUFS( jId, type ).getBuf( localBlk );
+    return m_bufs[type].getBuf( localBlk );
   }
 #endif
 
-  return M_BUFS( jId, type ).getBuf( blk );
+  return m_bufs[type].getBuf( blk );
 }
 
 PelUnitBuf Picture::getBuf( const UnitArea &unit, const PictureType &type )
@@ -1306,7 +1306,7 @@ const CPelUnitBuf Picture::getBuf( const UnitArea &unit, const PictureType &type
 
 Pel* Picture::getOrigin( const PictureType &type, const ComponentID compID ) const
 {
-  return M_BUFS( jId, type ).getOrigin( compID );
+  return m_bufs[type].getOrigin( compID );
 }
 
 void Picture::createSpliceIdx(int nums)
@@ -1459,7 +1459,7 @@ PelUnitBuf Picture::getDisplayBufFG(bool wrap)
     {
       msg(WARNING, "Film Grain synthesis is not performed. Error code: 0x%x \n", m_grainCharacteristic->m_errorCode);
     }
-    return M_BUFS(scheduler.getSplitPicId(), wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION);
+    return m_bufs[wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION];
   }
 }
 
@@ -1565,7 +1565,7 @@ PelUnitBuf Picture::getDisplayBufFGUpscaled(const SPS& sps, const PPS& pps, int 
     {
       msg(WARNING, "Film Grain synthesis is not performed. Error code: 0x%x \n", m_grainCharacteristic->m_errorCode);
     }
-    return M_BUFS(scheduler.getSplitPicId(), wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION);
+    return m_bufs[wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION];
   }
 }
 

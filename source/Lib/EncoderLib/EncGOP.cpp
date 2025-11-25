@@ -2696,33 +2696,33 @@ void EncGOP::compressGOP(int pocLast, int numPicRcvd, PicList &rcListPic, std::l
     {
       const Window& curScalingWindow = pcPic->getScalingWindow();
       const SPS& sps = *pcPic->cs->sps;
-      const int curPicWidth = pcPic->M_BUFS(0, PIC_ORIGINAL).Y().width - SPS::getWinUnitX(sps.getChromaFormatIdc()) * (curScalingWindow.getWindowLeftOffset() + curScalingWindow.getWindowRightOffset());
-      const int curPicHeight = pcPic->M_BUFS(0, PIC_ORIGINAL).Y().height - SPS::getWinUnitY(sps.getChromaFormatIdc()) * (curScalingWindow.getWindowTopOffset() + curScalingWindow.getWindowBottomOffset());
+      const int curPicWidth = pcPic->m_bufs[PIC_ORIGINAL].Y().width - SPS::getWinUnitX(sps.getChromaFormatIdc()) * (curScalingWindow.getWindowLeftOffset() + curScalingWindow.getWindowRightOffset());
+      const int curPicHeight = pcPic->m_bufs[PIC_ORIGINAL].Y().height - SPS::getWinUnitY(sps.getChromaFormatIdc()) * (curScalingWindow.getWindowTopOffset() + curScalingWindow.getWindowBottomOffset());
       const PPS* pps = m_pcEncLib->getPPS(0);
       const Window& refScalingWindow = pps->getScalingWindow();
-      const int refPicWidth = pcPic->M_BUFS(0, PIC_TRUE_ORIGINAL_INPUT).Y().width - SPS::getWinUnitX(sps.getChromaFormatIdc()) * (refScalingWindow.getWindowLeftOffset() + refScalingWindow.getWindowRightOffset());
-      const int refPicHeight = pcPic->M_BUFS(0, PIC_TRUE_ORIGINAL_INPUT).Y().height - SPS::getWinUnitY(sps.getChromaFormatIdc()) * (refScalingWindow.getWindowTopOffset() + refScalingWindow.getWindowBottomOffset());
+      const int refPicWidth = pcPic->m_bufs[PIC_TRUE_ORIGINAL_INPUT].Y().width - SPS::getWinUnitX(sps.getChromaFormatIdc()) * (refScalingWindow.getWindowLeftOffset() + refScalingWindow.getWindowRightOffset());
+      const int refPicHeight = pcPic->m_bufs[PIC_TRUE_ORIGINAL_INPUT].Y().height - SPS::getWinUnitY(sps.getChromaFormatIdc()) * (refScalingWindow.getWindowTopOffset() + refScalingWindow.getWindowBottomOffset());
       const int xScale = ((refPicWidth << ScalingRatio::BITS) + (curPicWidth >> 1)) / curPicWidth;
       const int yScale = ((refPicHeight << ScalingRatio::BITS) + (curPicHeight >> 1)) / curPicHeight;
       ScalingRatio scalingRatio = {xScale, yScale};
-      Picture::rescalePicture(scalingRatio, pcPic->M_BUFS(0, PIC_TRUE_ORIGINAL_INPUT), curScalingWindow, pcPic->getTrueOrigBuf(), pps->getScalingWindow(), chromaFormatIdc, sps.getBitDepths(), true, true,
+      Picture::rescalePicture(scalingRatio, pcPic->m_bufs[PIC_TRUE_ORIGINAL_INPUT], curScalingWindow, pcPic->getTrueOrigBuf(), pps->getScalingWindow(), chromaFormatIdc, sps.getBitDepths(), true, true,
         sps.getHorCollocatedChromaFlag(), sps.getVerCollocatedChromaFlag());
     }
     else if (m_pcEncLib->getPriSEIEnabled())
     {
       PelUnitBuf dst = pcPic->getTrueOrigBuf();
-      m_pcEncLib->getPriProcess().packRegions(pcPic->M_BUFS(0, PIC_TRUE_ORIGINAL_INPUT), m_pcEncLib->getLayerId(), dst, *pcPic->cs->sps);
+      m_pcEncLib->getPriProcess().packRegions(pcPic->m_bufs[PIC_TRUE_ORIGINAL_INPUT], m_pcEncLib->getLayerId(), dst, *pcPic->cs->sps);
     }
     else
     {
-      pcPic->getTrueOrigBuf().copyFrom(pcPic->M_BUFS(0, PIC_TRUE_ORIGINAL_INPUT));
+      pcPic->getTrueOrigBuf().copyFrom(pcPic->m_bufs[PIC_TRUE_ORIGINAL_INPUT]);
     }
 
     // fill PIC_FILTERED_ORIGINAL_FG
     if (isFgFiltered)
     {
-      pcPic->M_BUFS(0, PIC_FILTERED_ORIGINAL_FG).copyFrom(pcPic->M_BUFS(0, PIC_TRUE_ORIGINAL));
-      m_pcEncLib->getTemporalFilterForFG().filter(&pcPic->M_BUFS(0, PIC_FILTERED_ORIGINAL_FG), pocCurr);
+      pcPic->m_bufs[PIC_FILTERED_ORIGINAL_FG].copyFrom(pcPic->m_bufs[PIC_TRUE_ORIGINAL]);
+      m_pcEncLib->getTemporalFilterForFG().filter(&pcPic->m_bufs[PIC_FILTERED_ORIGINAL_FG], pocCurr);
     }
 
     // fill PIC_FILTERED_ORIGINAL
@@ -5503,7 +5503,7 @@ void EncGOP::xCalculateAddPSNR(Picture* pcPic, PelUnitBuf cPicD, const AccessUni
 #endif
   if (m_pcEncLib->isResChangeInClvsEnabled())
   {
-    const CPelBuf& upscaledOrg = pcPic->M_BUFS( 0, PIC_TRUE_ORIGINAL_INPUT).get( COMPONENT_Y );
+    const CPelBuf& upscaledOrg = pcPic->m_bufs[PIC_TRUE_ORIGINAL_INPUT].get( COMPONENT_Y );
     upscaledRec.create( pic.chromaFormat, Area( Position(), upscaledOrg ) );
 
     ScalingRatio scalingRatio;
@@ -5621,7 +5621,7 @@ void EncGOP::xCalculateAddPSNR(Picture* pcPic, PelUnitBuf cPicD, const AccessUni
 
     if (m_pcEncLib->isResChangeInClvsEnabled())
     {
-      const CPelBuf& upscaledOrg = pcPic->M_BUFS( 0, PIC_TRUE_ORIGINAL_INPUT ).get( compID );
+      const CPelBuf& upscaledOrg = pcPic->m_bufs[PIC_TRUE_ORIGINAL_INPUT].get( compID );
 
       const uint32_t upscaledWidth = upscaledOrg.width - ( m_pcEncLib->getSourcePadding( 0 ) >> ::getComponentScaleX( compID, format ) );
       const uint32_t upscaledHeight = upscaledOrg.height - ( m_pcEncLib->getSourcePadding( 1 ) >> ( !!bPicIsField + ::getComponentScaleY( compID, format ) ) );
