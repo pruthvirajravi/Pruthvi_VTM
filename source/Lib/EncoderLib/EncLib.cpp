@@ -132,6 +132,7 @@ void EncLib::create( const int layerId )
                      m_rcKeepHierarchicalBit, m_rcUseCtuSeparateModel, m_GOPList);
   }
 
+  m_filteredOrgPic.create(m_chromaFormatIdc, Area(0, 0, m_sourceWidth, m_sourceHeight));
 }
 
 void EncLib::destroy ()
@@ -142,7 +143,7 @@ void EncLib::destroy ()
   m_cCuEncoder.         destroy();
   if( m_alf )
   {
-    m_cEncALF.destroy();
+    m_cEncALF.          destroy();
   }
   m_cEncSAO.            destroyEncData();
   m_cEncSAO.            destroy();
@@ -150,7 +151,7 @@ void EncLib::destroy ()
   m_cRateCtrl.          destroy();
   m_cReshaper.          destroy();
   m_cInterSearch.       destroy();
-  m_cIntraSearch.destroy();
+  m_cIntraSearch.       destroy();
 }
 
 void EncLib::init(AUWriterIf *auWriterIf)
@@ -583,8 +584,6 @@ void EncLib::init(AUWriterIf *auWriterIf)
     picOrig->getOrigBuf().fill(0);
     m_cGOPEncoder.setPicOrig(picOrig);
   }
-
-  m_filteredOrgPic.create(m_chromaFormatIdc, Area(0, 0, m_sourceWidth, m_sourceHeight));
 }
 
 void EncLib::xInitScalingLists( SPS &sps, APS *aps )
