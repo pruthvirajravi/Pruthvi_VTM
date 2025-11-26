@@ -129,7 +129,7 @@ void SEIPackedRegionsInfoProcess::init(SEIPackedRegionsInfo& sei, const SPS& sps
   m_priRegionId = sei.m_regionId;
 }
 
-void SEIPackedRegionsInfoProcess::packRegions(PelUnitBuf& src, int layerId, PelUnitBuf& dst, const SPS& sps)
+void SEIPackedRegionsInfoProcess::packRegions(const CPelUnitBuf& src, int layerId, PelUnitBuf& dst, const SPS& sps)
 {
   for (int comp = 0; comp < ::getNumberValidComponents(m_chromaFormat); comp++)
   {

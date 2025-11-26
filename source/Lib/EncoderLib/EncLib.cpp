@@ -564,22 +564,27 @@ void EncLib::init(AUWriterIf *auWriterIf)
   }
   if (getUseCompositeRef())
   {
+    const auto fullSize = getGopBasedTemporalFilterEnabled()
+                            ? std::optional(Size(m_sourceWidth, m_sourceHeight))
+                            : std::nullopt;
+
     Picture *picBg = new Picture;
-    picBg->create(sps0.getWrapAroundEnabledFlag(), sps0.getChromaFormatIdc(), Size(pps0.getPicWidthInLumaSamples(), pps0.getPicHeightInLumaSamples()),
-                  sps0.getMaxCUWidth(), sps0.getMaxCUWidth() + 16, false, m_layerId,
-                  getGopBasedTemporalFilterEnabled());
+    picBg->create(sps0.getWrapAroundEnabledFlag(), sps0.getChromaFormatIdc(), Size(pps0.getPicWidthInLumaSamples(), pps0.getPicHeightInLumaSamples()), sps0.getMaxCUWidth(),
+                  sps0.getMaxCUWidth() + 16, false, m_layerId, fullSize, getGopBasedTemporalFilterEnabled());
     picBg->getRecoBuf().fill(0);
     picBg->finalInit( m_vps, sps0, pps0, &m_picHeader, m_apss, m_lmcsAPS, m_scalinglistAPS );
     picBg->allocateNewSlice();
     picBg->createSpliceIdx(pps0.pcv->sizeInCtus);
     m_cGOPEncoder.setPicBg(picBg);
     Picture *picOrig = new Picture;
-    picOrig->create(sps0.getWrapAroundEnabledFlag(), sps0.getChromaFormatIdc(), Size(pps0.getPicWidthInLumaSamples(), pps0.getPicHeightInLumaSamples()),
-                    sps0.getMaxCUWidth(), sps0.getMaxCUWidth() + 16, false, m_layerId,
-                    getGopBasedTemporalFilterEnabled());
+    picOrig->create(sps0.getWrapAroundEnabledFlag(), sps0.getChromaFormatIdc(),
+                    Size(pps0.getPicWidthInLumaSamples(), pps0.getPicHeightInLumaSamples()), sps0.getMaxCUWidth(),
+                    sps0.getMaxCUWidth() + 16, false, m_layerId, fullSize, getGopBasedTemporalFilterEnabled());
     picOrig->getOrigBuf().fill(0);
     m_cGOPEncoder.setPicOrig(picOrig);
   }
+
+  m_filteredOrgPic.create(m_chromaFormatIdc, Area(0, 0, m_sourceWidth, m_sourceHeight));
 }
 
 void EncLib::xInitScalingLists( SPS &sps, APS *aps )
@@ -727,7 +732,8 @@ bool EncLib::encodePrep(bool flush, PelStorage *pcPicYuvOrg, const InputColourSp
   if (pcPicYuvOrg != nullptr)
   {
     // get original YUV
-    Picture *pcPicCurr = nullptr;
+    Picture*  pcPicCurr = nullptr;
+    const int pocCurr   = m_pocLast + (m_compositeRefEnabled ? 2 : 1);
 
     int ppsID = -1; // Use default PPS ID
 #if ER_CHROMA_QP_WCG_PPS
@@ -738,11 +744,20 @@ bool EncLib::encodePrep(bool flush, PelStorage *pcPicYuvOrg, const InputColourSp
     }
 #endif
 
+    const bool isCurrentFrameFiltered = getGopBasedTemporalFilterEnabled() || getBIM();
+
+    PelStorage* encPic = pcPicYuvOrg;
+    if (isCurrentFrameFiltered)
+    {
+      encPic = &m_filteredOrgPic;
+      encPic->copyFrom(*pcPicYuvOrg);
+      m_temporalFilter.filter(encPic, pocCurr);
+    }
+
     if (m_resChangeInClvsEnabled && m_gopBasedRPREnabledFlag && (m_iQP >= getGOPBasedRPRQPThreshold()))
     {
-      const int poc = m_pocLast + (m_compositeRefEnabled ? 2 : 1);
       double upscaledPSNR = 0.0;
-      if (poc % getGOPSize() == 0)
+      if (pocCurr % getGOPSize() == 0)
       {
         ScalingRatio downScalingRatio{ 32768, 32768 };
         ScalingRatio upScalingRatio{ 8192, 8192 };
@@ -752,33 +767,30 @@ bool EncLib::encodePrep(bool flush, PelStorage *pcPicYuvOrg, const InputColourSp
         const ChromaFormat chFormatIdc = orgSPS->getChromaFormatIdc();
 
         const PPS* pTempPPS = m_ppsMap.getPS(ENC_PPS_ID_RPR + m_layerId);
-        Picture::rescalePicture(downScalingRatio, *pcPicYuvOrg, orgPPS->getScalingWindow(), *ppcPicYuvRPR[1], pTempPPS->getScalingWindow(), chFormatIdc, orgSPS->getBitDepths(), true, true,
+        Picture::rescalePicture(downScalingRatio, *encPic, orgPPS->getScalingWindow(), *ppcPicYuvRPR[1], pTempPPS->getScalingWindow(), chFormatIdc, orgSPS->getBitDepths(), true, true,
           orgSPS->getHorCollocatedChromaFlag(), orgSPS->getVerCollocatedChromaFlag());
         Picture::rescalePicture(upScalingRatio, *ppcPicYuvRPR[1], orgPPS->getScalingWindow(), *ppcPicYuvRPR[0], pTempPPS->getScalingWindow(), chFormatIdc, orgSPS->getBitDepths(), true, false,
           orgSPS->getHorCollocatedChromaFlag(), orgSPS->getVerCollocatedChromaFlag());
 
         // Calculate PSNR
-        const  Pel* pSrc0 = pcPicYuvOrg->get(COMPONENT_Y).bufAt(0, 0);
+        const  Pel* pSrc0 = encPic->get(COMPONENT_Y).bufAt(0, 0);
         const  Pel* pSrc1 = ppcPicYuvRPR[0]->get(COMPONENT_Y).bufAt(0, 0);
 
         uint64_t totalDiff = 0;
-        for (int y = 0; y < pcPicYuvOrg->get(COMPONENT_Y).height; y++)
+        for (int y = 0; y < encPic->get(COMPONENT_Y).height; y++)
         {
-          for (int x = 0; x < pcPicYuvOrg->get(COMPONENT_Y).width; x++)
+          for (int x = 0; x < encPic->get(COMPONENT_Y).width; x++)
           {
             int diff = pSrc0[x] - pSrc1[x];
             totalDiff += uint64_t(diff) * uint64_t(diff);
           }
-          pSrc0 += pcPicYuvOrg->get(COMPONENT_Y).stride;
+          pSrc0 += encPic->get(COMPONENT_Y).stride;
           pSrc1 += ppcPicYuvRPR[0]->get(COMPONENT_Y).stride;
         }
 
         const uint32_t maxval = 255 << (orgSPS->getBitDepth(ChannelType::LUMA) - 8);
         upscaledPSNR = totalDiff ? 10.0 * log10((double)maxval * maxval * orgPPS->getPicWidthInLumaSamples() * orgPPS->getPicHeightInLumaSamples() / (double)totalDiff) : 999.99;
-      }
 
-      if (poc % getGOPSize() == 0)
-      {
         const int qpBias = 37;
         if ((m_psnrThresholdRPR - (m_iQP - qpBias) * 0.5) < upscaledPSNR)
         {
@@ -860,12 +872,9 @@ bool EncLib::encodePrep(bool flush, PelStorage *pcPicYuvOrg, const InputColourSp
     const PPS *pPPS = ( ppsID < 0 ) ? m_ppsMap.getFirstPS() : m_ppsMap.getPS( ppsID );
     const SPS *pSPS = m_spsMap.getPS( pPPS->getSPSId() );
 
+    // fill PIC_ORIGINAL
     if (m_resChangeInClvsEnabled)
     {
-      pcPicCurr->M_BUFS( 0, PIC_ORIGINAL_INPUT ).getBuf( COMPONENT_Y ).copyFrom( pcPicYuvOrg->getBuf( COMPONENT_Y ) );
-      pcPicCurr->M_BUFS( 0, PIC_ORIGINAL_INPUT ).getBuf( COMPONENT_Cb ).copyFrom( pcPicYuvOrg->getBuf( COMPONENT_Cb ) );
-      pcPicCurr->M_BUFS( 0, PIC_ORIGINAL_INPUT ).getBuf( COMPONENT_Cr ).copyFrom( pcPicYuvOrg->getBuf( COMPONENT_Cr ) );
-
       const ChromaFormat chromaFormatIdc = pSPS->getChromaFormatIdc();
 
       const PPS* refPPS = m_ppsMap.getPS(m_layerId);
@@ -892,23 +901,30 @@ bool EncLib::encodePrep(bool flush, PelStorage *pcPicYuvOrg, const InputColourSp
 
       const ScalingRatio scalingRatio = { xScale, yScale };
 
-      Picture::rescalePicture(scalingRatio, *pcPicYuvOrg, refPPS->getScalingWindow(), pcPicCurr->getOrigBuf(),
+      Picture::rescalePicture(scalingRatio, *encPic, refPPS->getScalingWindow(), pcPicCurr->getOrigBuf(),
                               pPPS->getScalingWindow(), chromaFormatIdc, pSPS->getBitDepths(), true, true,
                               pSPS->getHorCollocatedChromaFlag(), pSPS->getVerCollocatedChromaFlag());
     }
     else if (m_priSEIEnabled)
     {
-      pcPicCurr->M_BUFS( 0, PIC_ORIGINAL_INPUT ).getBuf( COMPONENT_Y ).copyFrom( pcPicYuvOrg->getBuf( COMPONENT_Y ) );
-      pcPicCurr->M_BUFS( 0, PIC_ORIGINAL_INPUT ).getBuf( COMPONENT_Cb ).copyFrom( pcPicYuvOrg->getBuf( COMPONENT_Cb ) );
-      pcPicCurr->M_BUFS( 0, PIC_ORIGINAL_INPUT ).getBuf( COMPONENT_Cr ).copyFrom( pcPicYuvOrg->getBuf( COMPONENT_Cr ) );
-
       PelUnitBuf dst = pcPicCurr->getOrigBuf();
-      m_priProcess.packRegions(*pcPicYuvOrg, m_layerId, dst, *pSPS);
+      m_priProcess.packRegions(*encPic, m_layerId, dst, *pSPS);
     }
     else
     {
-      pcPicCurr->M_BUFS( 0, PIC_ORIGINAL ).swap( *pcPicYuvOrg );
+      if (encPic == pcPicYuvOrg)
+      {
+        pcPicCurr->M_BUFS(0, PIC_ORIGINAL).copyFrom(*encPic);
+      }
+      else
+      {
+        pcPicCurr->M_BUFS(0, PIC_ORIGINAL).swap(*encPic);
+      }
     }
+
+    // fill PIC_TRUE_ORIGINAL_INPUT
+    pcPicCurr->M_BUFS( 0, PIC_TRUE_ORIGINAL_INPUT ).swap( *pcPicYuvOrg );
+
     pcPicCurr->finalInit( m_vps, *pSPS, *pPPS, &m_picHeader, m_apss, m_lmcsAPS, m_scalinglistAPS );
 
     pcPicCurr->poc = m_pocLast;
@@ -1182,16 +1198,17 @@ void EncLib::xGetNewPicBuffer ( std::list<PelUnitBuf*>& rcListPicYuvRecOut, Pict
 
   if (rpcPic==0)
   {
+    int        thePPS = m_layerId;
+    const PPS& pps0   = *m_ppsMap.getPS(thePPS);
+
+    const auto fullSize = getGopBasedTemporalFilterEnabled()
+                            ? std::optional(Size(pps0.getPicWidthInLumaSamples(), pps0.getPicHeightInLumaSamples()))
+                            : std::nullopt;
+
     rpcPic = new Picture;
     rpcPic->create(sps.getWrapAroundEnabledFlag(), sps.getChromaFormatIdc(), Size(pps.getPicWidthInLumaSamples(), pps.getPicHeightInLumaSamples()),
-      sps.getMaxCUWidth(), sps.getMaxCUWidth() + PIC_MARGIN, false, m_layerId, getShutterFilterFlag());
+      sps.getMaxCUWidth(), sps.getMaxCUWidth() + PIC_MARGIN, false, m_layerId, fullSize, getShutterFilterFlag());
 
-    if (m_resChangeInClvsEnabled || m_priSEIEnabled)
-    {
-      int thePPS = m_layerId;
-      const PPS& pps0 = *m_ppsMap.getPS(thePPS);
-      rpcPic->M_BUFS(0, PIC_ORIGINAL_INPUT).create(sps.getChromaFormatIdc(), Area(Position(), Size(pps0.getPicWidthInLumaSamples(), pps0.getPicHeightInLumaSamples())));
-    }
     if ( getUseAdaptiveQP() )
     {
       const uint32_t maxDqpLayer = m_picHeader.getCuQpDeltaSubdivIntra() / 2 + 1;

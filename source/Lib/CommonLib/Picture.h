@@ -49,8 +49,10 @@
 #include "Hash.h"
 #include "MCTS.h"
 #include "SEIColourTransform.h"
-#include <deque>
 #include "SEIFilmGrainSynthesizer.h"
+
+#include <deque>
+#include <optional>
 
 class SEI;
 class AQpLayer;
@@ -73,10 +75,11 @@ struct Picture : public UnitArea
   Picture();
 
   void create(const bool useWrapAround, const ChromaFormat& _chromaFormat, const Size& size, const unsigned _maxCUSize,
-              const unsigned margin, const bool bDecoder, const int layerId, const bool enablePostFilteringForHFR);
+              const unsigned margin, const bool bDecoder, const int layerId, const std::optional<Size> fullSize,
+              const bool enablePostFilteringForHFR);
   void destroy();
 
-  void createTempBuffers( const unsigned _maxCUSize, bool useFilterFrame, bool resChange, bool decoder, bool isFgFiltered);
+  void createTempBuffers( const unsigned _maxCUSize, bool useFilterFrame, bool decoder, bool isFgFiltered);
   void destroyTempBuffers();
 
   int                       m_padValue;

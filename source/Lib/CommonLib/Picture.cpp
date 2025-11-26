@@ -79,27 +79,29 @@ Picture::Picture()
 
 void Picture::create(const bool useWrapAround, const ChromaFormat& _chromaFormat, const Size& size,
                      const unsigned _maxCUSize, const unsigned _margin, const bool _decoder, const int _layerId,
-                     const bool enablePostFilteringForHFR)
+                     const std::optional<Size> fullSize, const bool enablePostFilteringForHFR)
 {
   layerId = _layerId;
   UnitArea::operator=( UnitArea( _chromaFormat, Area( Position{ 0, 0 }, size ) ) );
   margin            =  MAX_SCALING_RATIO*_margin;
-  const Area a      = Area( Position(), size );
-  M_BUFS( 0, PIC_RECONSTRUCTION ).create( _chromaFormat, a, _maxCUSize, margin, MEMORY_ALIGN_DEF_SIZE );
+  const Area area   = Area( Position(), size );
+  const Area full   = Area( Position(), fullSize.value_or( size ) );
+  M_BUFS( 0, PIC_RECONSTRUCTION ).create( _chromaFormat, area, _maxCUSize, margin, MEMORY_ALIGN_DEF_SIZE );
 
   if (useWrapAround)
   {
-    M_BUFS(0, PIC_RECON_WRAP).create(_chromaFormat, a, _maxCUSize, margin, MEMORY_ALIGN_DEF_SIZE);
+    M_BUFS(0, PIC_RECON_WRAP).create(_chromaFormat, area, _maxCUSize, margin, MEMORY_ALIGN_DEF_SIZE);
   }
 
   if (enablePostFilteringForHFR)
   {
-    M_BUFS(0, PIC_YUV_POST_REC).create(_chromaFormat, a, _maxCUSize, margin, MEMORY_ALIGN_DEF_SIZE);
+    M_BUFS(0, PIC_YUV_POST_REC).create(_chromaFormat, area, _maxCUSize, margin, MEMORY_ALIGN_DEF_SIZE);
   }
 
   if( !_decoder )
   {
-    M_BUFS( 0, PIC_ORIGINAL ).    create( _chromaFormat, a );
+    M_BUFS( 0, PIC_ORIGINAL ).            create( _chromaFormat, area );
+    M_BUFS( 0, PIC_TRUE_ORIGINAL_INPUT ). create( _chromaFormat, full );
   }
 #if !KEEP_PRED_AND_RESI_SIGNALS
   m_ctuArea = UnitArea( _chromaFormat, Area( Position{ 0, 0 }, Size( _maxCUSize, _maxCUSize ) ) );
@@ -148,16 +150,16 @@ void Picture::destroy()
   m_grainBuf           = nullptr;
 }
 
-void Picture::createTempBuffers( const unsigned _maxCUSize, bool useFilterFrame, bool resChange, bool decoder, bool isFgFiltered)
+void Picture::createTempBuffers( const unsigned _maxCUSize, bool useFilterFrame, bool decoder, bool isFgFiltered)
 {
 #if KEEP_PRED_AND_RESI_SIGNALS
   const Area a( Position{ 0, 0 }, lumaSize() );
 #else
-  const Area a = m_ctuArea.Y();
+  const Area ctuArea = m_ctuArea.Y();
 #endif
 
-  M_BUFS( jId, PIC_PREDICTION                   ).create( chromaFormat, a,   _maxCUSize );
-  M_BUFS( jId, PIC_RESIDUAL                     ).create( chromaFormat, a,   _maxCUSize );
+  M_BUFS( jId, PIC_PREDICTION ).create( chromaFormat, ctuArea, _maxCUSize );
+  M_BUFS( jId, PIC_RESIDUAL   ).create( chromaFormat, ctuArea, _maxCUSize );
 
   if (!decoder)
   {
@@ -166,15 +168,6 @@ void Picture::createTempBuffers( const unsigned _maxCUSize, bool useFilterFrame,
     if (useFilterFrame)
     {
       M_BUFS(jId, PIC_FILTERED_ORIGINAL).create(chromaFormat, picArea, _maxCUSize);
-    }
-    if (resChange)
-    {
-      const Area aInput(Position{ 0, 0 }, Size(M_BUFS(jId, PIC_ORIGINAL_INPUT).Y().width, M_BUFS(jId, PIC_ORIGINAL_INPUT).Y().height));
-      M_BUFS(jId, PIC_TRUE_ORIGINAL_INPUT).create(chromaFormat, aInput, _maxCUSize);
-      if (useFilterFrame)
-      {
-        M_BUFS(jId, PIC_FILTERED_ORIGINAL_INPUT).create(chromaFormat, aInput, _maxCUSize);
-      }
     }
     if (isFgFiltered)
     {
@@ -192,11 +185,15 @@ void Picture::destroyTempBuffers()
 {
   for (uint32_t t = 0; t < NUM_PIC_TYPES; t++)
   {
-    if (t == PIC_RESIDUAL || t == PIC_PREDICTION
-      || t == PIC_FILTERED_ORIGINAL || t == PIC_TRUE_ORIGINAL || t == PIC_FILTERED_ORIGINAL_FG
-      || t == PIC_TRUE_ORIGINAL_INPUT || t == PIC_FILTERED_ORIGINAL_INPUT)
+    switch( t )
     {
+    case PIC_RESIDUAL:
+    case PIC_PREDICTION:
+    case PIC_FILTERED_ORIGINAL:
+    case PIC_TRUE_ORIGINAL:
+    case PIC_FILTERED_ORIGINAL_FG:
       M_BUFS(0, t).destroy();
+    default:;
     }
   }
 
@@ -1233,12 +1230,12 @@ void Picture::extendWrapBorder( const PPS *pps )
 
 PelBuf Picture::getBuf( const ComponentID compID, const PictureType &type )
 {
-  return M_BUFS( ( type == PIC_ORIGINAL || type == PIC_TRUE_ORIGINAL || type == PIC_FILTERED_ORIGINAL || type == PIC_ORIGINAL_INPUT || type == PIC_TRUE_ORIGINAL_INPUT || type == PIC_FILTERED_ORIGINAL_INPUT ) ? 0 : scheduler.getSplitPicId(), type ).getBuf( compID );
+  return M_BUFS( ( type == PIC_ORIGINAL || type == PIC_TRUE_ORIGINAL || type == PIC_FILTERED_ORIGINAL || type == PIC_TRUE_ORIGINAL_INPUT ) ? 0 : scheduler.getSplitPicId(), type ).getBuf( compID );
 }
 
 const CPelBuf Picture::getBuf( const ComponentID compID, const PictureType &type ) const
 {
-  return M_BUFS( ( type == PIC_ORIGINAL || type == PIC_TRUE_ORIGINAL || type == PIC_FILTERED_ORIGINAL || type == PIC_ORIGINAL_INPUT || type == PIC_TRUE_ORIGINAL_INPUT || type == PIC_FILTERED_ORIGINAL_INPUT ) ? 0 : scheduler.getSplitPicId(), type ).getBuf( compID );
+  return M_BUFS( ( type == PIC_ORIGINAL || type == PIC_TRUE_ORIGINAL || type == PIC_FILTERED_ORIGINAL || type == PIC_TRUE_ORIGINAL_INPUT ) ? 0 : scheduler.getSplitPicId(), type ).getBuf( compID );
 }
 
 PelBuf Picture::getBuf( const CompArea &blk, const PictureType &type )
