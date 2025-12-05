@@ -3052,7 +3052,11 @@ void Slice::scaleRefPicList( Picture *scaledRefPic[ ], PicHeader *picHeader, APS
 
             scaledRefPic[j]->poc = NOT_VALID;
 
-            scaledRefPic[j]->create(sps->getWrapAroundEnabledFlag(), sps->getChromaFormatIdc(), Size( pps->getPicWidthInLumaSamples(), pps->getPicHeightInLumaSamples() ), sps->getMaxCUWidth(), sps->getMaxCUWidth() + 16, isDecoder, layerId, false);
+            const auto fullSize = sps->getRprEnabledFlag()
+                ? std::optional(Size(sps->getMaxPicWidthInLumaSamples(), sps->getMaxPicHeightInLumaSamples()))
+                : std::nullopt;
+
+            scaledRefPic[j]->create(sps->getWrapAroundEnabledFlag(), sps->getChromaFormatIdc(), Size( pps->getPicWidthInLumaSamples(), pps->getPicHeightInLumaSamples() ), sps->getMaxCUWidth(), sps->getMaxCUWidth() + 16, isDecoder, layerId, fullSize, false);
           }
 
           scaledRefPic[j]->poc = poc;

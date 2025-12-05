@@ -76,7 +76,7 @@ public:
   {}
   ~SEIPackedRegionsInfoProcess() {}
   void init(SEIPackedRegionsInfo& sei, const SPS& sps, uint32_t picWidth, uint32_t picHeight);
-  void packRegions(PelUnitBuf& src, int layerId, PelUnitBuf& dst, const SPS& sps);
+  void packRegions(const CPelUnitBuf& src, int layerId, PelUnitBuf& dst, const SPS& sps);
   void reconstruct(PicList* pcListPic, Picture* currentPic, PelUnitBuf& dst, const SPS& sps);
 
   int                   m_layerId;

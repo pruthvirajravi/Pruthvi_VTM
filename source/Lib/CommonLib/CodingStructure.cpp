@@ -1500,25 +1500,25 @@ void CodingStructure::rebindPicBufs()
 {
   CHECK( parent, "rebindPicBufs can only be used for the top level CodingStructure" );
 
-  if (!picture->M_BUFS(0, PIC_RECONSTRUCTION).bufs.empty())
+  if (!picture->m_bufs[PIC_RECONSTRUCTION].bufs.empty())
   {
-    m_reco.createFromBuf(picture->M_BUFS(0, PIC_RECONSTRUCTION));
+    m_reco.createFromBuf(picture->m_bufs[PIC_RECONSTRUCTION]);
   }
   else
   {
     m_reco.destroy();
   }
-  if (!picture->M_BUFS(0, PIC_PREDICTION).bufs.empty())
+  if (!picture->m_bufs[PIC_PREDICTION].bufs.empty())
   {
-    m_pred.createFromBuf(picture->M_BUFS(0, PIC_PREDICTION));
+    m_pred.createFromBuf(picture->m_bufs[PIC_PREDICTION]);
   }
   else
   {
     m_pred.destroy();
   }
-  if (!picture->M_BUFS(0, PIC_RESIDUAL).bufs.empty())
+  if (!picture->m_bufs[PIC_RESIDUAL].bufs.empty())
   {
-    m_resi.createFromBuf(picture->M_BUFS(0, PIC_RESIDUAL));
+    m_resi.createFromBuf(picture->m_bufs[PIC_RESIDUAL]);
   }
   else
   {
@@ -1526,7 +1526,7 @@ void CodingStructure::rebindPicBufs()
   }
   if( pcv->isEncoder )
   {
-    if (!picture->M_BUFS(0, PIC_RESIDUAL).bufs.empty())
+    if (!picture->m_bufs[PIC_RESIDUAL].bufs.empty())
     {
       m_orgr.create(area.chromaFormat, area.blocks[0], pcv->maxCUWidth);
     }

@@ -141,6 +141,7 @@ private:
 #endif
   EncTemporalFilter         m_temporalFilter;
   EncTemporalFilter         m_temporalFilterForFG;
+  PelStorage                m_filteredOrgPic;
   SEINeuralNetworkPostFiltering m_nnPostFiltering;
   EncType                   m_encType;
   SEIPackedRegionsInfoProcess m_priProcess;
