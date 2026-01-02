@@ -85,7 +85,6 @@ bool tryDecodePicture(Picture *pcPic, const int expectedPoc, const std::string &
 class DecLib
 {
 private:
-  int                     m_maxRefPicNum;
   bool m_isFirstGeneralHrd;
   GeneralHrdParams        m_prevGeneralHrdParams;
 
@@ -404,7 +403,8 @@ public:
 protected:
   void  xUpdateRasInit(Slice* slice);
 
-  Picture * xGetNewPicBuffer( const SPS &sps, const PPS &pps, const uint32_t temporalLayer, const int layerId );
+  Picture* xGetNewPicBuffer(const SPS* sps, const PPS* pps, const uint32_t temporalLayer, const int layerId);
+
   void  xCreateLostPicture( int iLostPOC, const int layerId );
   void  xCreateUnavailablePicture( const PPS *pps, const int iUnavailablePoc, const bool longTermFlag, const int temporalId, const int layerId, const bool interLayerRefPicFlag );
   void  checkParameterSetsInclusionSEIconstraints(const InputNALUnit nalu);
