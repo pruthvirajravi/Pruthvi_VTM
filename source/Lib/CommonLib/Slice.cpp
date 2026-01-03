@@ -3052,7 +3052,7 @@ void Slice::scaleRefPicList( Picture *scaledRefPic[ ], PicHeader *picHeader, APS
 
             scaledRefPic[j]->poc = NOT_VALID;
 
-            const auto fullSize = sps->getRprEnabledFlag()
+            const auto fullSize = sps->getResChangeInClvsEnabledFlag()
                 ? std::optional(Size(sps->getMaxPicWidthInLumaSamples(), sps->getMaxPicHeightInLumaSamples()))
                 : std::nullopt;
 

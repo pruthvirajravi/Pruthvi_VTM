@@ -671,7 +671,7 @@ Picture* DecLib::xGetNewPicBuffer( const SPS &sps, const PPS &pps, const uint32_
                                     ? sps.getWrapAroundEnabledFlag()
                                     : true;
 
-  const auto fullSize = sps.getRprEnabledFlag()
+  const auto fullSize = sps.getResChangeInClvsEnabledFlag()
                           ? std::optional(Size(sps.getMaxPicWidthInLumaSamples(), sps.getMaxPicHeightInLumaSamples()))
                           : std::nullopt;
 
