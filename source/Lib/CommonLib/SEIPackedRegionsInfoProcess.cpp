@@ -56,8 +56,7 @@ void SEIPackedRegionsInfoProcess::init(SEIPackedRegionsInfo& sei, const SPS& sps
     m_targetPicSize.width  = sei.m_targetPicWidthMinus1 + 1;
     m_targetPicSize.height = sei.m_targetPicHeightMinus1 + 1;
   }
-  m_bitDepthY = sps.getBitDepth(ChannelType::LUMA);
-  m_bitDepthC = sps.getBitDepth(ChannelType::CHROMA);
+  m_bitDepths    = sps.getBitDepths();
   m_chromaFormat = sps.getChromaFormatIdc();
   m_subWidthC = SPS::getWinUnitX(sps.getChromaFormatIdc());
   m_subHeightC = SPS::getWinUnitY(sps.getChromaFormatIdc());
@@ -144,7 +143,7 @@ void SEIPackedRegionsInfoProcess::packRegions(const CPelUnitBuf& src, int layerI
   for (int comp = 0; comp < ::getNumberValidComponents(m_chromaFormat); comp++)
   {
     ComponentID compID = ComponentID(comp);
-    dst.get(compID).fill(1 << ((isLuma(compID) ? m_bitDepthY : m_bitDepthC) - 1));
+    dst.get(compID).fill(1 << (m_bitDepths[toChannelType(compID)] - 1));
   }
   for (uint32_t i = 0; i < m_priNumRegions; i++)
   {
@@ -172,11 +171,11 @@ void SEIPackedRegionsInfoProcess::packRegions(const CPelUnitBuf& src, int layerI
       bool    downsampling   = (m_priTargetRegion[i].width > m_priRegionSize[i].width)
                           || (m_priTargetRegion[i].height > m_priRegionSize[i].height);
       bool useLumaFilter = downsampling;
-      Picture::sampleRateConv(
-        scalingRatio, ::getComponentScaleX(compID, m_chromaFormat), ::getComponentScaleY(compID, m_chromaFormat),
-        beforeScaleSub, 0, 0, afterScaleSub, 0, 0, isLuma(compID) ? m_bitDepthY : m_bitDepthC,
-        downsampling || useLumaFilter ? true : isLuma(compID), downsampling, isLuma(compID) ? 1 : sps.getHorCollocatedChromaFlag(),
-        isLuma(compID) ? 1 : sps.getVerCollocatedChromaFlag(), false, false);
+      Picture::sampleRateConv(scalingRatio, ::getComponentScaleX(compID, m_chromaFormat),
+                              ::getComponentScaleY(compID, m_chromaFormat), beforeScaleSub, 0, 0, afterScaleSub, 0, 0,
+                              m_bitDepths[toChannelType(compID)], downsampling || useLumaFilter ? true : isLuma(compID),
+                              downsampling, isLuma(compID) ? 1 : sps.getHorCollocatedChromaFlag(),
+                              isLuma(compID) ? 1 : sps.getVerCollocatedChromaFlag(), false, false);
     }
   }
 }
@@ -186,7 +185,7 @@ void SEIPackedRegionsInfoProcess::reconstruct(PicList* pcListPic, Picture* curre
   for (int comp = 0; comp < ::getNumberValidComponents(m_chromaFormat); comp++)
   {
     ComponentID compID = ComponentID(comp);
-    dst.get(compID).fill(1 << ((isLuma(compID) ? m_bitDepthY : m_bitDepthC) - 1));
+    dst.get(compID).fill(1 << (m_bitDepths[toChannelType(compID)] - 1));
   }
 
   uint32_t maxId = *std::max_element(m_priRegionId.begin(), m_priRegionId.end());
@@ -275,11 +274,12 @@ void SEIPackedRegionsInfoProcess::reconstruct(PicList* pcListPic, Picture* curre
         bool   downsampling  = (m_priRegionSize[i].width > m_priTargetRegion[i].width)
                             || (m_priRegionSize[i].height > m_priTargetRegion[i].height);
         bool useLumaFilter = downsampling;
-        Picture::sampleRateConv(
-          scalingRatio, ::getComponentScaleX(compID, m_chromaFormat), ::getComponentScaleY(compID, m_chromaFormat),
-          beforeScaleSub, 0, 0, afterScaleSub, 0, 0, isLuma(compID) ? m_bitDepthY : m_bitDepthC,
-          downsampling || useLumaFilter ? true : isLuma(compID), downsampling, isLuma(compID) ? 1 : sps.getHorCollocatedChromaFlag(),
-          isLuma(compID) ? 1 : sps.getVerCollocatedChromaFlag(), false, false);
+        Picture::sampleRateConv(scalingRatio, ::getComponentScaleX(compID, m_chromaFormat),
+                                ::getComponentScaleY(compID, m_chromaFormat), beforeScaleSub, 0, 0, afterScaleSub, 0, 0,
+                                m_bitDepths[toChannelType(compID)],
+                                downsampling || useLumaFilter ? true : isLuma(compID), downsampling,
+                                isLuma(compID) ? 1 : sps.getHorCollocatedChromaFlag(),
+                                isLuma(compID) ? 1 : sps.getVerCollocatedChromaFlag(), false, false);
       }
     }
   }

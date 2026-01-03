@@ -58,8 +58,6 @@ public:
     : m_layerId(0)
     , m_enabled(false)
     , m_persistence(false)
-    , m_bitDepthY(10)
-    , m_bitDepthC(10)
     , m_priUnitSize(1)
     , m_chromaFormat(ChromaFormat::_420)
     , m_subWidthC(2)
@@ -79,8 +77,7 @@ public:
   Size                  m_picSize;
   Size                  m_maxPicSize;
   Size                  m_targetPicSize;
-  uint32_t              m_bitDepthY;
-  uint32_t              m_bitDepthC;
+  BitDepths             m_bitDepths;
   uint32_t              m_priUnitSize;
   ChromaFormat          m_chromaFormat;
   uint32_t              m_subWidthC;
