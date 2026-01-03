@@ -1524,14 +1524,23 @@ void DecApp::xFlushOutput( PicList* pcListPic, const int layerId )
         }
         pcPic->neededForOutput = false;
       }
-      if (pcPic != nullptr && (m_shutterIntervalPostFileName.empty() || !getShutterFilterFlag()))
-      {
-        pcPic->destroy();
-        delete pcPic;
-        pcPic    = nullptr;
-        *iterPic = nullptr;
-      }
+
       iterPic++;
+    }
+
+    for (Picture*& p: *pcListPic)
+    {
+      if (layerId != NOT_VALID && p->layerId != layerId)
+      {
+        continue;
+      }
+
+      if (p != nullptr && (m_shutterIntervalPostFileName.empty() || !getShutterFilterFlag()))
+      {
+        p->destroy();
+        delete p;
+        p = nullptr;
+      }
     }
   }
 
