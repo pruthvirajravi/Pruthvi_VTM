@@ -1385,10 +1385,12 @@ void DecApp::xFlushOutput( PicList* pcListPic, const int layerId )
 
       if (pcPic->neededForOutput)
       {
+        const SPS*    sps  = pcPic->cs->sps;
+        const Window& conf = pcPic->getConformanceWindow();
+
         // write to file
         if (!m_reconFileName.empty())
         {
-          const Window& conf            = pcPic->getConformanceWindow();
           ChromaFormat  chromaFormatIdc = pcPic->m_chromaFormatIdc;
           if (m_cDecLib.getPriProcess().m_enabled && m_cDecLib.getPriProcess().m_layerId == pcPic->layerId
               && m_cDecLib.getPriProcess().m_targetPicWidth > 0 && m_cDecLib.getPriProcess().m_targetPicHeight > 0)
@@ -1398,14 +1400,13 @@ void DecApp::xFlushOutput( PicList* pcListPic, const int layerId )
                                                      m_cDecLib.getPriProcess().m_targetPicHeight));
             outPic.create(chromaFormatIdc, a, 0);
 
-            m_cDecLib.getPriProcess().reconstruct(pcListPic, pcPic, outPic, *pcPic->cs->sps);
+            m_cDecLib.getPriProcess().reconstruct(pcListPic, pcPic, outPic, *sps);
             m_cVideoIOYuvReconFile[pcPic->layerId].write(outPic.get(COMPONENT_Y).width, outPic.get(COMPONENT_Y).height,
                                                          outPic, m_outputColourSpaceConvert, m_packedYUVMode, 0, 0, 0,
                                                          0, ChromaFormat::UNDEFINED, m_clipOutputVideoToRec709Range);
           }
           else if (m_upscaledOutput)
           {
-            const SPS* sps = pcPic->cs->sps;
             m_cVideoIOYuvReconFile[pcPic->layerId].writeUpscaledPicture(
               *sps, *pcPic->cs->pps, pcPic->getRecoBuf(), m_outputColourSpaceConvert, m_packedYUVMode, m_upscaledOutput,
               ChromaFormat::UNDEFINED, m_clipOutputVideoToRec709Range, m_upscaleFilterForDisplay, m_upscaledOutputWidth,
@@ -1426,8 +1427,6 @@ void DecApp::xFlushOutput( PicList* pcListPic, const int layerId )
         // Perform FGS on decoded frame and write to output FGS file
         if (!m_SEIFGSFileName.empty())
         {
-          const Window& conf            = pcPic->getConformanceWindow();
-          const SPS*    sps             = pcPic->cs->sps;
           ChromaFormat  chromaFormatIdc = sps->getChromaFormatIdc();
           if (m_upscaledOutput)
           {
@@ -1436,7 +1435,7 @@ void DecApp::xFlushOutput( PicList* pcListPic, const int layerId )
               const Window& confSps = sps->getConformanceWindow();
               m_videoIOYuvSEIFGSFile[pcPic->layerId].write(
                 sps->getMaxPicWidthInLumaSamples(), sps->getMaxPicHeightInLumaSamples(),
-                pcPic->getDisplayBufFGUpscaled(*sps, *pcPic->cs->pps, m_upscaledOutput, sps->getChromaFormatIdc(),
+                pcPic->getDisplayBufFGUpscaled(*sps, *pcPic->cs->pps, m_upscaledOutput, chromaFormatIdc,
                                                m_upscaleFilterForDisplay, m_upscaledOutputWidth,
                                                m_upscaledOutputHeight),
                 m_outputColourSpaceConvert, m_packedYUVMode,
@@ -1472,8 +1471,6 @@ void DecApp::xFlushOutput( PicList* pcListPic, const int layerId )
           int blendingRatio = getBlendingRatio();
           pcPic->xOutputPostFilteredPic(pcPic, pcListPic, blendingRatio);
 
-          const Window& conf            = pcPic->getConformanceWindow();
-          const SPS*    sps             = pcPic->cs->sps;
           ChromaFormat  chromaFormatIdc = sps->getChromaFormatIdc();
 
           m_cTVideoIOYuvSIIPostFile.write(pcPic->getPostRecBuf().get(COMPONENT_Y).width,
@@ -1489,8 +1486,6 @@ void DecApp::xFlushOutput( PicList* pcListPic, const int layerId )
         // Perform CTI on decoded frame and write to output CTI file
         if (!m_SEICTIFileName.empty())
         {
-          const Window& conf            = pcPic->getConformanceWindow();
-          const SPS*    sps             = pcPic->cs->sps;
           ChromaFormat  chromaFormatIdc = sps->getChromaFormatIdc();
           if (m_upscaledOutput)
           {
