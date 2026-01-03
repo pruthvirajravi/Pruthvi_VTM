@@ -1188,55 +1188,64 @@ void DecLib::xCreateLostPicture( int iLostPoc, const int layerId )
   }
 }
 
-void  DecLib::xCreateUnavailablePicture( const PPS *pps, const int iUnavailablePoc, const bool longTermFlag, const int temporalId, const int layerId, const bool interLayerRefPicFlag )
+void DecLib::xCreateUnavailablePicture(const PPS* pps, const int unavailablePoc, const bool longTermFlag,
+                                       const int temporalId, const int layerId, const bool interLayerRefPicFlag)
 {
-  msg(INFO, "Note: Inserting unavailable POC : %d\n", iUnavailablePoc);
-  auto const sps = m_parameterSetManager.getSPS(pps->getSPSId());
-  Picture*   cFillPic = xGetNewPicBuffer(sps, pps, 0, layerId);
+  msg(INFO, "Note: Inserting unavailable picture with POC = %d\n", unavailablePoc);
 
-  cFillPic->cs      = new CodingStructure(g_xuPool);
-  cFillPic->cs->sps = sps;
-  cFillPic->cs->pps = pps;
-  cFillPic->cs->vps = m_parameterSetManager.getVPS(sps->getVPSId());
-  cFillPic->cs->create(cFillPic->cs->sps->getChromaFormatIdc(), Area(0, 0, cFillPic->cs->pps->getPicWidthInLumaSamples(), cFillPic->cs->pps->getPicHeightInLumaSamples()), true, (bool)(cFillPic->cs->sps->getPLTMode()));
-  cFillPic->allocateNewSlice();
-  cFillPic->m_chromaFormatIdc = sps->getChromaFormatIdc();
-  cFillPic->m_bitDepths = sps->getBitDepths();
+  SPS* sps = m_parameterSetManager.getSPS(pps->getSPSId());
+  VPS* vps = m_parameterSetManager.getVPS(sps->getVPSId());
 
-  cFillPic->slices[0]->initSlice();
+  Picture* fillPic = xGetNewPicBuffer(sps, pps, 0, layerId);
 
-  cFillPic->setDecodingOrderNumber(0);
-  cFillPic->subLayerNonReferencePictureDueToSTSA = false;
-  cFillPic->unscaledPic = cFillPic;
+  fillPic->cs      = new CodingStructure(g_xuPool);
+  fillPic->cs->sps = sps;
+  fillPic->cs->pps = pps;
+  fillPic->cs->vps = vps;
+  fillPic->cs->create(sps->getChromaFormatIdc(),
+                      Area(0, 0, pps->getPicWidthInLumaSamples(), pps->getPicHeightInLumaSamples()), true,
+                      sps->getPLTMode());
 
-  uint32_t yFill = 1 << (sps->getBitDepth(ChannelType::LUMA) - 1);
-  uint32_t cFill = 1 << (sps->getBitDepth(ChannelType::CHROMA) - 1);
-  cFillPic->getRecoBuf().Y().fill(yFill);
-  cFillPic->getRecoBuf().Cb().fill(cFill);
-  cFillPic->getRecoBuf().Cr().fill(cFill);
+  fillPic->m_chromaFormatIdc = sps->getChromaFormatIdc();
+  fillPic->m_bitDepths       = sps->getBitDepths();
 
-  //  for(int ctuRsAddr=0; ctuRsAddr<cFillPic->getNumberOfCtusInFrame(); ctuRsAddr++)  { cFillPic->getCtu(ctuRsAddr)->initCtu(cFillPic, ctuRsAddr); }
-  cFillPic->referenced = true;
-  cFillPic->interLayerRefPicFlag = interLayerRefPicFlag;
-  cFillPic->longTerm = longTermFlag;
-  cFillPic->slices[0]->setPOC(iUnavailablePoc);
-  cFillPic->poc = iUnavailablePoc;
-  if( (cFillPic->slices[0]->getTLayer() == 0) && (cFillPic->slices[0]->getNalUnitType() != NAL_UNIT_CODED_SLICE_RASL) && (cFillPic->slices[0]->getNalUnitType() != NAL_UNIT_CODED_SLICE_RADL) )
+  fillPic->allocateNewSlice();   // Sets slice VPS/SPS/PPS/APS pointers
+
+  Slice* slice = fillPic->slices.front();
+  slice->initSlice();
+  slice->setPOC(unavailablePoc);
+  // picture header is not derived for generated reference picture
+  slice->setPicHeader(nullptr);
+
+  fillPic->setDecodingOrderNumber(0);
+  fillPic->subLayerNonReferencePictureDueToSTSA = false;
+  fillPic->unscaledPic                          = fillPic;
+
+  for (auto& blk: fillPic->blocks)
   {
-    m_prevTid0POC = cFillPic->slices[0]->getPOC();
+    const ComponentID compID  = blk.compID;
+    const Pel         midGray = 1 << (sps->getBitDepth(toChannelType(compID)) - 1);
+    fillPic->getRecoBuf().get(compID).fill(midGray);
   }
 
-  cFillPic->reconstructed = true;
-  cFillPic->neededForOutput = false;
-  // picture header is not derived for generated reference picture
-  cFillPic->slices[0]->setPicHeader( nullptr );
-  cFillPic->temporalId = temporalId;
-  cFillPic->nonReferencePictureFlag = false;
-  cFillPic->slices[0]->setPPS( pps );
+  fillPic->referenced           = true;
+  fillPic->interLayerRefPicFlag = interLayerRefPicFlag;
+  fillPic->longTerm             = longTermFlag;
+  fillPic->poc                  = unavailablePoc;
+  if (slice->getTLayer() == 0 && slice->getNalUnitType() != NAL_UNIT_CODED_SLICE_RASL
+      && slice->getNalUnitType() != NAL_UNIT_CODED_SLICE_RADL)
+  {
+    m_prevTid0POC = slice->getPOC();
+  }
+
+  fillPic->reconstructed           = true;
+  fillPic->neededForOutput         = false;
+  fillPic->temporalId              = temporalId;
+  fillPic->nonReferencePictureFlag = false;
 
   if (m_pocRandomAccess == MAX_INT)
   {
-    m_pocRandomAccess = iUnavailablePoc;
+    m_pocRandomAccess = unavailablePoc;
   }
 }
 
