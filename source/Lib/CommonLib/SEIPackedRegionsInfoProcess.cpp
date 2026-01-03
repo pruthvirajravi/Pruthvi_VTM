@@ -52,12 +52,11 @@ void SEIPackedRegionsInfoProcess::init(SEIPackedRegionsInfo& sei, const SPS& sps
   m_picHeight = picHeight;
   m_maxPicWidth = sps.getMaxPicWidthInLumaSamples();
   m_maxPicHeight = sps.getMaxPicHeightInLumaSamples();
-  m_targetPicWidth = 0;
-  m_targetPicHeight = 0;
+  m_targetPicSize           = Size();
   if (sei.m_targetPicParamsPresentFlag)
   {
-    m_targetPicWidth = sei.m_targetPicWidthMinus1 + 1;
-    m_targetPicHeight = sei.m_targetPicHeightMinus1 + 1;
+    m_targetPicSize.width  = sei.m_targetPicWidthMinus1 + 1;
+    m_targetPicSize.height = sei.m_targetPicHeightMinus1 + 1;
   }
   m_bitDepthY = sps.getBitDepth(ChannelType::LUMA);
   m_bitDepthC = sps.getBitDepth(ChannelType::CHROMA);
@@ -67,8 +66,10 @@ void SEIPackedRegionsInfoProcess::init(SEIPackedRegionsInfo& sei, const SPS& sps
 
   if (sei.m_targetPicParamsPresentFlag)
   {
-    CHECK(m_targetPicWidth % m_subWidthC != 0, "The value of (pri_target_pic_width_minus1 + 1) % SubWidthC shall be equal to 0");
-    CHECK(m_targetPicHeight % m_subHeightC != 0, "The value of (pri_target_pic_height_minus1 + 1) % SubHeightC shall be equal to 0");
+    CHECK(m_targetPicSize.width % m_subWidthC != 0,
+          "The value of (pri_target_pic_width_minus1 + 1) % SubWidthC shall be equal to 0");
+    CHECK(m_targetPicSize.height % m_subHeightC != 0,
+          "The value of (pri_target_pic_height_minus1 + 1) % SubHeightC shall be equal to 0");
   }
 
   m_priNumRegions = sei.m_numRegionsMinus1 + 1;

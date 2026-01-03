@@ -62,8 +62,6 @@ public:
     , m_picHeight(0)
     , m_maxPicWidth(0)
     , m_maxPicHeight(0)
-    , m_targetPicWidth(0)
-    , m_targetPicHeight(0)
     , m_bitDepthY(10)
     , m_bitDepthC(10)
     , m_priUnitSize(1)
@@ -86,8 +84,7 @@ public:
   uint32_t              m_picHeight;
   uint32_t              m_maxPicWidth;
   uint32_t              m_maxPicHeight;
-  uint32_t              m_targetPicWidth;
-  uint32_t              m_targetPicHeight;
+  Size                  m_targetPicSize;
   uint32_t              m_bitDepthY;
   uint32_t              m_bitDepthC;
   uint32_t              m_priUnitSize;

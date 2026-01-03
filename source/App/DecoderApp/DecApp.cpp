@@ -1141,10 +1141,10 @@ void DecApp::xWriteOutput( PicList* pcListPic, uint32_t tId )
           const Window &conf = pcPic->getConformanceWindow();
           ChromaFormat  chromaFormatIdc = pcPic->m_chromaFormatIdc;
           if (m_cDecLib.getPriProcess().m_enabled && m_cDecLib.getPriProcess().m_layerId == pcPic->layerId
-            && m_cDecLib.getPriProcess().m_targetPicWidth > 0 && m_cDecLib.getPriProcess().m_targetPicHeight > 0)
+              && m_cDecLib.getPriProcess().m_targetPicSize != Size())
           {
             PelStorage outPic;
-            const Area a = Area( Position(0, 0), Size(m_cDecLib.getPriProcess().m_targetPicWidth, m_cDecLib.getPriProcess().m_targetPicHeight) );
+            const Area a = Area(Position(), m_cDecLib.getPriProcess().m_targetPicSize);
             outPic.create( chromaFormatIdc, a, 0 );
             m_cDecLib.getPriProcess().reconstruct(pcListPic, pcPic, outPic, *pcPic->cs->sps);
             m_cVideoIOYuvReconFile[pcPic->layerId].write(
@@ -1393,11 +1393,10 @@ void DecApp::xFlushOutput( PicList* pcListPic, const int layerId )
         {
           ChromaFormat  chromaFormatIdc = pcPic->m_chromaFormatIdc;
           if (m_cDecLib.getPriProcess().m_enabled && m_cDecLib.getPriProcess().m_layerId == pcPic->layerId
-              && m_cDecLib.getPriProcess().m_targetPicWidth > 0 && m_cDecLib.getPriProcess().m_targetPicHeight > 0)
+              && m_cDecLib.getPriProcess().m_targetPicSize != Size())
           {
             PelStorage outPic;
-            const Area a = Area(Position(0, 0), Size(m_cDecLib.getPriProcess().m_targetPicWidth,
-                                                     m_cDecLib.getPriProcess().m_targetPicHeight));
+            const Area a = Area(Position(), m_cDecLib.getPriProcess().m_targetPicSize);
             outPic.create(chromaFormatIdc, a, 0);
 
             m_cDecLib.getPriProcess().reconstruct(pcListPic, pcPic, outPic, *sps);
