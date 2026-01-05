@@ -565,7 +565,7 @@ void EncLib::init(AUWriterIf *auWriterIf)
   }
   if (getUseCompositeRef())
   {
-    const auto fullSize = getGopBasedTemporalFilterEnabled()
+    const auto fullSize = isResChangeInClvsEnabled()
                             ? std::optional(Size(m_sourceWidth, m_sourceHeight))
                             : std::nullopt;
 
@@ -1200,7 +1200,7 @@ void EncLib::xGetNewPicBuffer ( std::list<PelUnitBuf*>& rcListPicYuvRecOut, Pict
     int        thePPS = m_layerId;
     const PPS& pps0   = *m_ppsMap.getPS(thePPS);
 
-    const auto fullSize = getGopBasedTemporalFilterEnabled()
+    const auto fullSize = isResChangeInClvsEnabled()
                             ? std::optional(Size(pps0.getPicWidthInLumaSamples(), pps0.getPicHeightInLumaSamples()))
                             : std::nullopt;
 
