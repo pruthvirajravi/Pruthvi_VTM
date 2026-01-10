@@ -74,6 +74,9 @@ void SEINeuralNetworkPostFiltering::setPicActivatedNnpfc(Picture* picture)
       }
       CHECK((uint32_t)nnpfa->m_outputFlag.size() > nnpfc->m_numInpPicsInOutputTensor, "The value of nnpfa_num_output_entries shall be in the range of 0 to NumInpPicsInOutputTensor");
       CHECK(!nnpfa->m_promptUpdateFlag && nnpfc->m_inbandPromptFlag && nnpfc->m_prompt.empty(), "When nnpfa_prompt_update_flag is equal 0 and nnpfc_inband_prompt_flag is equal 1, nnpfc_prompt shall not be a null string")
+#if JVET_AN0058
+      CHECK((!(nnpfc->m_auxInpIdc & 2) || ((nnpfc->m_auxInpIdc & 2) && !nnpfc->m_inbandPromptFlag)) && nnpfa->m_promptUpdateFlag, "When ( nnpfc_auxiliary_inp_idc & 2 ) is equal to 0 or nnpfc_inband_prompt_flag is present and equal to 0, the value of nnpfa_prompt_update_flag, if when present, shall be equal to 0");
+#endif
     }
   }
 
