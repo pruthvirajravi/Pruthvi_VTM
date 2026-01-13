@@ -55,7 +55,8 @@
 // clang-format off
 
 //########### place macros to be removed in next cycle below this line ###############
-#define JVET_AN0348          1
+#define JVET_AN0237_FILM_GRAIN_ANALYSIS                   1 // film grain analysis improvements
+#define JVET_AN0348                                       1
 
 #define JVET_AN0058          1                       // JVET-AN0058: On the NNPF SEI messages
 

@@ -1110,9 +1110,9 @@ void EncApp::xInitLibCfg( int layerIdx )
   m_cEncLib.setFilmGrainAnalysisEnabled                          (m_fgcSEIAnalysisEnabled);
   m_cEncLib.setFilmGrainExternalMask                             (m_fgcSEIExternalMask);
   m_cEncLib.setFilmGrainExternalDenoised                         (m_fgcSEIExternalDenoised);
-  m_cEncLib.setFilmGrainTemporalFilterPastRefs(m_fgcSEITemporalFilterPastRefs);
+  m_cEncLib.setFilmGrainTemporalFilterPastRefs                   (m_fgcSEITemporalFilterPastRefs);
   m_cEncLib.setFilmGrainTemporalFilterFutureRefs                 (m_fgcSEITemporalFilterFutureRefs);
-  m_cEncLib.setFilmGrainTemporalFilterStrengths(m_fgcSEITemporalFilterStrengths);
+  m_cEncLib.setFilmGrainTemporalFilterStrengths                  (m_fgcSEITemporalFilterStrengths);
   m_cEncLib.setFilmGrainCharactersticsSEIPerPictureSEI           (m_fgcSEIPerPictureSEI);
   for (int i = 0; i < MAX_NUM_COMPONENT; i++) {
     m_cEncLib.setFGCSEICompModelPresent                          (m_fgcSEICompModelPresent[i], i);
