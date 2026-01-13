@@ -48,61 +48,64 @@ void SEIPackedRegionsInfoProcess::init(SEIPackedRegionsInfo& sei, const SPS& sps
   m_multilayerFlag = sei.m_multilayerFlag;
   m_priUseMaxDimensionsFlag = sei.m_useMaxDimensionsFlag;
   m_priUnitSize = 1 << sei.m_log2UnitSize;
-  m_picWidth = picWidth;
-  m_picHeight = picHeight;
-  m_maxPicWidth = sps.getMaxPicWidthInLumaSamples();
-  m_maxPicHeight = sps.getMaxPicHeightInLumaSamples();
-  m_targetPicWidth = 0;
-  m_targetPicHeight = 0;
+  m_picSize                 = Size(picWidth, picHeight);
+  m_maxPicSize              = Size(sps.getMaxPicWidthInLumaSamples(), sps.getMaxPicHeightInLumaSamples());
+  m_targetPicSize           = Size();
   if (sei.m_targetPicParamsPresentFlag)
   {
-    m_targetPicWidth = sei.m_targetPicWidthMinus1 + 1;
-    m_targetPicHeight = sei.m_targetPicHeightMinus1 + 1;
+    m_targetPicSize.width  = sei.m_targetPicWidthMinus1 + 1;
+    m_targetPicSize.height = sei.m_targetPicHeightMinus1 + 1;
   }
-  m_bitDepthY = sps.getBitDepth(ChannelType::LUMA);
-  m_bitDepthC = sps.getBitDepth(ChannelType::CHROMA);
+  m_bitDepths    = sps.getBitDepths();
   m_chromaFormat = sps.getChromaFormatIdc();
   m_subWidthC = SPS::getWinUnitX(sps.getChromaFormatIdc());
   m_subHeightC = SPS::getWinUnitY(sps.getChromaFormatIdc());
 
   if (sei.m_targetPicParamsPresentFlag)
   {
-    CHECK(m_targetPicWidth % m_subWidthC != 0, "The value of (pri_target_pic_width_minus1 + 1) % SubWidthC shall be equal to 0");
-    CHECK(m_targetPicHeight % m_subHeightC != 0, "The value of (pri_target_pic_height_minus1 + 1) % SubHeightC shall be equal to 0");
+    CHECK(m_targetPicSize.width % m_subWidthC != 0,
+          "The value of (pri_target_pic_width_minus1 + 1) % SubWidthC shall be equal to 0");
+    CHECK(m_targetPicSize.height % m_subHeightC != 0,
+          "The value of (pri_target_pic_height_minus1 + 1) % SubHeightC shall be equal to 0");
   }
 
   m_priNumRegions = sei.m_numRegionsMinus1 + 1;
-  m_priRegionTopLeftX.resize(sei.m_numRegionsMinus1 + 1);
-  m_priRegionTopLeftY.resize(sei.m_numRegionsMinus1 + 1);
-  m_priRegionWidth.resize(sei.m_numRegionsMinus1 + 1);
-  m_priRegionHeight.resize(sei.m_numRegionsMinus1 + 1);
-  m_priResampleWidthNum.resize(sei.m_numRegionsMinus1 + 1);
-  m_priResampleWidthDenom.resize(sei.m_numRegionsMinus1 + 1);
-  m_priResampleHeightNum.resize(sei.m_numRegionsMinus1 + 1);
-  m_priResampleHeightDenom.resize(sei.m_numRegionsMinus1 + 1);
-  m_priTargetRegionWidth.resize(sei.m_numRegionsMinus1 + 1);
-  m_priTargetRegionHeight.resize(sei.m_numRegionsMinus1 + 1);
-  m_priRegionId.resize(sei.m_numRegionsMinus1 + 1);
+  m_priRegionTopLeftX.resize(m_priNumRegions);
+  m_priRegionTopLeftY.resize(m_priNumRegions);
+  m_priRegionSize.resize(m_priNumRegions);
+  m_priResampleWidthNum.resize(m_priNumRegions);
+  m_priResampleWidthDenom.resize(m_priNumRegions);
+  m_priResampleHeightNum.resize(m_priNumRegions);
+  m_priResampleHeightDenom.resize(m_priNumRegions);
+  m_priTargetRegion.resize(m_priNumRegions);
+  m_priRegionId.resize(m_priNumRegions);
   if (sei.m_multilayerFlag)
   {
     m_regionLayerId = sei.m_regionLayerId;
     m_regionIsALayerFlag = sei.m_regionIsALayerFlag;
   }
-  for (uint32_t i = 0; i <= sei.m_numRegionsMinus1; i++)
+  for (uint32_t i = 0; i < m_priNumRegions; i++)
   {
     if (!sei.m_useMaxDimensionsFlag)
     {
       m_priRegionTopLeftX[i] = sei.m_regionTopLeftInUnitsX[i] * m_priUnitSize;
       m_priRegionTopLeftY[i] = sei.m_regionTopLeftInUnitsY[i] * m_priUnitSize;
-      m_priRegionWidth[i] = (sei.m_regionWidthInUnitsMinus1[i] + 1) * m_priUnitSize;
-      m_priRegionHeight[i] = (sei.m_regionHeightInUnitsMinus1[i] + 1) * m_priUnitSize;
+      m_priRegionSize[i].width  = (sei.m_regionWidthInUnitsMinus1[i] + 1) * m_priUnitSize;
+      m_priRegionSize[i].height = (sei.m_regionHeightInUnitsMinus1[i] + 1) * m_priUnitSize;
     }
     else
     {
-      m_priRegionTopLeftX[i] = (sei.m_regionTopLeftInUnitsX[i] * m_priUnitSize * m_picWidth + m_maxPicWidth/2) / m_maxPicWidth;
-      m_priRegionTopLeftY[i] = (sei.m_regionTopLeftInUnitsY[i] * m_priUnitSize * m_picHeight + m_maxPicHeight/2) / m_maxPicHeight;
-      m_priRegionWidth[i] = ((sei.m_regionWidthInUnitsMinus1[i] + 1) * m_priUnitSize * m_picWidth + m_maxPicWidth/2) / m_maxPicWidth;
-      m_priRegionHeight[i] = ((sei.m_regionHeightInUnitsMinus1[i] + 1) * m_priUnitSize * m_picHeight + m_maxPicHeight/2) / m_maxPicHeight;
+      m_priRegionTopLeftX[i] =
+        Fraction(sei.m_regionTopLeftInUnitsX[i] * m_priUnitSize * m_picSize.width, m_maxPicSize.width).getIntValRound();
+      m_priRegionTopLeftY[i] =
+        Fraction(sei.m_regionTopLeftInUnitsY[i] * m_priUnitSize * m_picSize.height, m_maxPicSize.height)
+          .getIntValRound();
+      m_priRegionSize[i].width =
+        Fraction((sei.m_regionWidthInUnitsMinus1[i] + 1) * m_priUnitSize * m_picSize.width, m_maxPicSize.width)
+          .getIntValRound();
+      m_priRegionSize[i].height =
+        Fraction((sei.m_regionHeightInUnitsMinus1[i] + 1) * m_priUnitSize * m_picSize.height, m_maxPicSize.height)
+          .getIntValRound();
     }
     uint32_t resamplingRatioIdx = 0;
     if (sei.m_numResamplingRatiosMinus1 > 0)
@@ -113,14 +116,20 @@ void SEIPackedRegionsInfoProcess::init(SEIPackedRegionsInfo& sei, const SPS& sps
     m_priResampleWidthDenom[i] = sei.m_resamplingWidthDenomMinus1[resamplingRatioIdx] + 1;
     m_priResampleHeightNum[i] = sei.m_resamplingHeightNumMinus1[resamplingRatioIdx] + 1;
     m_priResampleHeightDenom[i] = sei.m_resamplingHeightDenomMinus1[resamplingRatioIdx] + 1;
-    m_priTargetRegionWidth[i] = ((uint32_t)(((double)m_priRegionWidth[i] * m_priResampleWidthNum[i]) / (m_priResampleWidthDenom[i] * m_subWidthC) + 0.5)) * m_subWidthC;
-    m_priTargetRegionHeight[i] = ((uint32_t)(((double)m_priRegionHeight[i] * m_priResampleHeightNum[i]) / (m_priResampleHeightDenom[i] * m_subHeightC) + 0.5)) * m_subHeightC;
+    m_priTargetRegion[i].width =
+      Fraction(m_priRegionSize[i].width * m_priResampleWidthNum[i], m_priResampleWidthDenom[i] * m_subWidthC)
+        .getIntValRound()
+      * m_subWidthC;
+    m_priTargetRegion[i].height =
+      Fraction(m_priRegionSize[i].height * m_priResampleHeightNum[i], m_priResampleHeightDenom[i] * m_subHeightC)
+        .getIntValRound()
+      * m_subHeightC;
   }
   if (sei.m_targetPicParamsPresentFlag)
   {
-    m_priTargetRegionTopLeftX.resize(sei.m_numRegionsMinus1 + 1);
-    m_priTargetRegionTopLeftY.resize(sei.m_numRegionsMinus1 + 1);
-    for (uint32_t i = 0; i <= sei.m_numRegionsMinus1; i++)
+    m_priTargetRegionTopLeftX.resize(m_priNumRegions);
+    m_priTargetRegionTopLeftY.resize(m_priNumRegions);
+    for (uint32_t i = 0; i < m_priNumRegions; i++)
     {
       m_priTargetRegionTopLeftX[i] = sei.m_targetRegionTopLeftInUnitsX[i] * m_priUnitSize;
       m_priTargetRegionTopLeftY[i] = sei.m_targetRegionTopLeftInUnitsY[i] * m_priUnitSize;
@@ -134,17 +143,20 @@ void SEIPackedRegionsInfoProcess::packRegions(const CPelUnitBuf& src, int layerI
   for (int comp = 0; comp < ::getNumberValidComponents(m_chromaFormat); comp++)
   {
     ComponentID compID = ComponentID(comp);
-    dst.get(compID).fill(1 << ((isLuma(compID) ? m_bitDepthY : m_bitDepthC) - 1));
+    dst.get(compID).fill(1 << (m_bitDepths[toChannelType(compID)] - 1));
   }
   for (uint32_t i = 0; i < m_priNumRegions; i++)
   {
     if (m_multilayerFlag && (m_regionLayerId[i] != layerId || m_regionIsALayerFlag[i]))
     {
       continue;
-    }      
-    int xScale = ((m_priTargetRegionWidth[i] << ScalingRatio::BITS) + (m_priRegionWidth[i] >> 1)) / m_priRegionWidth[i];
-    int yScale = ((m_priTargetRegionHeight[i] << ScalingRatio::BITS) + (m_priRegionHeight[i] >> 1)) / m_priRegionHeight[i];
+    }
+    const int xScale =
+      Fraction(m_priTargetRegion[i].width << ScalingRatio::BITS, m_priRegionSize[i].width).getIntValRound();
+    const int yScale =
+      Fraction(m_priTargetRegion[i].height << ScalingRatio::BITS, m_priRegionSize[i].height).getIntValRound();
     ScalingRatio scalingRatio = { xScale, yScale };
+
     for (int comp = 0; comp < ::getNumberValidComponents(m_chromaFormat); comp++)
     {
       ComponentID compID = ComponentID(comp);
@@ -152,15 +164,18 @@ void SEIPackedRegionsInfoProcess::packRegions(const CPelUnitBuf& src, int layerI
       PelBuf& afterScale = dst.get(compID);
       int cx = isLuma(compID) ? 1 : m_subWidthC;
       int cy = isLuma(compID) ? 1 : m_subHeightC;
-      CPelBuf beforeScaleSub = beforeScale.subBuf(m_priTargetRegionTopLeftX[i] / cx, m_priTargetRegionTopLeftY[i] / cy, m_priTargetRegionWidth[i] / cx, m_priTargetRegionHeight[i] / cy);
-      PelBuf afterScaleSub = afterScale.subBuf(m_priRegionTopLeftX[i] / cx, m_priRegionTopLeftY[i] / cy, m_priRegionWidth[i] / cx, m_priRegionHeight[i] / cy);
-      bool downsampling = (m_priTargetRegionWidth[i] > m_priRegionWidth[i]) || (m_priTargetRegionHeight[i] > m_priRegionHeight[i]);
+      CPelBuf beforeScaleSub = beforeScale.subBuf(m_priTargetRegionTopLeftX[i] / cx, m_priTargetRegionTopLeftY[i] / cy,
+                                                  m_priTargetRegion[i].width / cx, m_priTargetRegion[i].height / cy);
+      PelBuf  afterScaleSub  = afterScale.subBuf(m_priRegionTopLeftX[i] / cx, m_priRegionTopLeftY[i] / cy,
+                                                 m_priRegionSize[i].width / cx, m_priRegionSize[i].height / cy);
+      bool    downsampling   = (m_priTargetRegion[i].width > m_priRegionSize[i].width)
+                          || (m_priTargetRegion[i].height > m_priRegionSize[i].height);
       bool useLumaFilter = downsampling;
-      Picture::sampleRateConv(
-        scalingRatio, ::getComponentScaleX(compID, m_chromaFormat), ::getComponentScaleY(compID, m_chromaFormat),
-        beforeScaleSub, 0, 0, afterScaleSub, 0, 0, isLuma(compID) ? m_bitDepthY : m_bitDepthC,
-        downsampling || useLumaFilter ? true : isLuma(compID), downsampling, isLuma(compID) ? 1 : sps.getHorCollocatedChromaFlag(),
-        isLuma(compID) ? 1 : sps.getVerCollocatedChromaFlag(), false, false);
+      Picture::sampleRateConv(scalingRatio, ::getComponentScaleX(compID, m_chromaFormat),
+                              ::getComponentScaleY(compID, m_chromaFormat), beforeScaleSub, 0, 0, afterScaleSub, 0, 0,
+                              m_bitDepths[toChannelType(compID)], downsampling || useLumaFilter ? true : isLuma(compID),
+                              downsampling, isLuma(compID) ? 1 : sps.getHorCollocatedChromaFlag(),
+                              isLuma(compID) ? 1 : sps.getVerCollocatedChromaFlag(), false, false);
     }
   }
 }
@@ -170,7 +185,7 @@ void SEIPackedRegionsInfoProcess::reconstruct(PicList* pcListPic, Picture* curre
   for (int comp = 0; comp < ::getNumberValidComponents(m_chromaFormat); comp++)
   {
     ComponentID compID = ComponentID(comp);
-    dst.get(compID).fill(1 << ((isLuma(compID) ? m_bitDepthY : m_bitDepthC) - 1));
+    dst.get(compID).fill(1 << (m_bitDepths[toChannelType(compID)] - 1));
   }
 
   uint32_t maxId = *std::max_element(m_priRegionId.begin(), m_priRegionId.end());
@@ -179,7 +194,8 @@ void SEIPackedRegionsInfoProcess::reconstruct(PicList* pcListPic, Picture* curre
     auto it = std::find(m_priRegionId.begin(), m_priRegionId.end(), regionId);
     if (it != m_priRegionId.end())
     {
-      int i = (int)(it - m_priRegionId.begin());
+      const ptrdiff_t i = std::distance(m_priRegionId.begin(), it);
+
       Picture* picSrc = currentPic;
       if (m_multilayerFlag && m_regionLayerId[i] != currentPic->layerId)
       {
@@ -203,32 +219,45 @@ void SEIPackedRegionsInfoProcess::reconstruct(PicList* pcListPic, Picture* curre
       }
       const PelUnitBuf& src = picSrc->getRecoBuf();
       Window win = picSrc->getConformanceWindow();
-      int winLeftOffset = win.getWindowLeftOffset() * SPS::getWinUnitX(picSrc->m_chromaFormatIdc);;
-      int winTopOffset = win.getWindowTopOffset() * SPS::getWinUnitY(picSrc->m_chromaFormatIdc);
-      int winRightOffset = win.getWindowRightOffset() * SPS::getWinUnitX(picSrc->m_chromaFormatIdc);;
+
+      int winLeftOffset   = win.getWindowLeftOffset() * SPS::getWinUnitX(picSrc->m_chromaFormatIdc);
+      int winTopOffset    = win.getWindowTopOffset() * SPS::getWinUnitY(picSrc->m_chromaFormatIdc);
+      int winRightOffset  = win.getWindowRightOffset() * SPS::getWinUnitX(picSrc->m_chromaFormatIdc);
       int winBottomOffset = win.getWindowBottomOffset() * SPS::getWinUnitY(picSrc->m_chromaFormatIdc);
+
       uint32_t picWidthInLumaSamples = src.get(COMPONENT_Y).width - winLeftOffset - winRightOffset;
-      uint32_t PicHeightInLumaSamples = src.get(COMPONENT_Y).height - winTopOffset - winBottomOffset;
+      uint32_t picHeightInLumaSamples = src.get(COMPONENT_Y).height - winTopOffset - winBottomOffset;
       if (m_multilayerFlag && m_regionIsALayerFlag[i] != 0)
       {
         m_priRegionTopLeftX[i] =0;
         m_priRegionTopLeftY[i] =0;
-        m_priRegionWidth[i] = picWidthInLumaSamples;
-        m_priRegionHeight[i] = PicHeightInLumaSamples;
+        m_priRegionSize[i]     = Size(picWidthInLumaSamples, picHeightInLumaSamples);
       }
       if (m_priUseMaxDimensionsFlag)
       {
-        m_priTargetRegionWidth[i] = ((uint32_t)(((double)m_priRegionWidth[i] * m_priResampleWidthNum[i] * m_maxPicWidth) / (m_priResampleWidthDenom[i] * picWidthInLumaSamples * m_subWidthC) + 0.5)) * m_subWidthC;
-        m_priTargetRegionHeight[i] = ((uint32_t)(((double)m_priRegionHeight[i] * m_priResampleHeightNum[i] * m_maxPicHeight) / (m_priResampleHeightDenom[i] * PicHeightInLumaSamples * m_subHeightC) + 0.5)) * m_subHeightC;
+        m_priTargetRegion[i].width =
+          ((uint32_t) (((double) m_priRegionSize[i].width * m_priResampleWidthNum[i] * m_maxPicSize.width)
+                         / (m_priResampleWidthDenom[i] * picWidthInLumaSamples * m_subWidthC)
+                       + 0.5))
+          * m_subWidthC;
+        m_priTargetRegion[i].height =
+          ((uint32_t) (((double) m_priRegionSize[i].height * m_priResampleHeightNum[i] * m_maxPicSize.height)
+                         / (m_priResampleHeightDenom[i] * picHeightInLumaSamples * m_subHeightC)
+                       + 0.5))
+          * m_subHeightC;
       }
-      CHECK(m_priRegionTopLeftX[i] % m_subWidthC != 0, "priRegionTopLeftX[i] % SubWidthC shall be equal to 0");
-      CHECK(m_priRegionTopLeftY[i] % m_subHeightC != 0, "priRegionTopLeftY[i] % SubHeightC shall be equal to 0");
-      CHECK(m_priRegionWidth[i] % m_subWidthC != 0,  "priRegionWidth[i] % SubWidthC shall be equal to 0");
-      CHECK(m_priRegionHeight[i] % m_subHeightC != 0, "priRegionHeight[i] % SubHeightC shall be equal to 0");
-      CHECK(m_priRegionTopLeftX[i] + m_priRegionWidth[i] > picWidthInLumaSamples, "priRegionTopLeftX[i] + priRegionWidth[i] shall be less than or equal to picWidthInLumaSamples");
-      CHECK(m_priRegionTopLeftY[i] + m_priRegionHeight[i] > PicHeightInLumaSamples, "priRegionTopLeftY[i] + priRegionHeight[i] shall be less than or equal to picHightInLumaSamples");
-      int xScale = ((m_priRegionWidth[i] << ScalingRatio::BITS) + (m_priTargetRegionWidth[i] >> 1)) / m_priTargetRegionWidth[i];
-      int yScale = ((m_priRegionHeight[i] << ScalingRatio::BITS) + (m_priTargetRegionHeight[i] >> 1)) / m_priTargetRegionHeight[i];
+      CHECK(m_priRegionTopLeftX[i] % m_subWidthC != 0, "priRegionTopLeftX[i] must be a multiple of SubWidthC");
+      CHECK(m_priRegionTopLeftY[i] % m_subHeightC != 0, "priRegionTopLeftY[i] must be a multiple of SubHeightC");
+      CHECK(m_priRegionSize[i].width % m_subWidthC != 0, "priRegionWidth[i] must be a multiple of SubWidthC");
+      CHECK(m_priRegionSize[i].height % m_subHeightC != 0, "priRegionHeight[i] must be a multiple of SubHeightC");
+      CHECK(m_priRegionTopLeftX[i] + m_priRegionSize[i].width > picWidthInLumaSamples,
+            "priRegionTopLeftX[i] + priRegionWidth[i] shall be less than or equal to picWidthInLumaSamples");
+      CHECK(m_priRegionTopLeftY[i] + m_priRegionSize[i].height > picHeightInLumaSamples,
+            "priRegionTopLeftY[i] + priRegionHeight[i] shall be less than or equal to picHightInLumaSamples");
+      int xScale = ((m_priRegionSize[i].width << ScalingRatio::BITS) + (m_priTargetRegion[i].width >> 1))
+                   / m_priTargetRegion[i].width;
+      int yScale = ((m_priRegionSize[i].height << ScalingRatio::BITS) + (m_priTargetRegion[i].height >> 1))
+                   / m_priTargetRegion[i].height;
       ScalingRatio scalingRatio = { xScale, yScale };
       for (int comp = 0; comp < ::getNumberValidComponents(m_chromaFormat); comp++)
       {
@@ -237,15 +266,20 @@ void SEIPackedRegionsInfoProcess::reconstruct(PicList* pcListPic, Picture* curre
         PelBuf& afterScale = dst.get(compID);
         int cx = isLuma(compID) ? 1 : m_subWidthC;
         int cy = isLuma(compID) ? 1 : m_subHeightC;
-        CPelBuf beforeScaleSub = beforeScale.subBuf((winLeftOffset + m_priRegionTopLeftX[i]) / cx, (winTopOffset + m_priRegionTopLeftY[i]) / cy, m_priRegionWidth[i] / cx, m_priRegionHeight[i] / cy);
-        PelBuf afterScaleSub = afterScale.subBuf(m_priTargetRegionTopLeftX[i] / cx, m_priTargetRegionTopLeftY[i] / cy, m_priTargetRegionWidth[i] / cx, m_priTargetRegionHeight[i] / cy);
-        bool downsampling = (m_priRegionWidth[i] > m_priTargetRegionWidth[i]) || (m_priRegionHeight[i] > m_priTargetRegionHeight[i]);
+        CPelBuf        beforeScaleSub = beforeScale.subBuf((winLeftOffset + m_priRegionTopLeftX[i]) / cx,
+                                                           (winTopOffset + m_priRegionTopLeftY[i]) / cy,
+                                                           m_priRegionSize[i].width / cx, m_priRegionSize[i].height / cy);
+        PelBuf afterScaleSub = afterScale.subBuf(m_priTargetRegionTopLeftX[i] / cx, m_priTargetRegionTopLeftY[i] / cy,
+                                                 m_priTargetRegion[i].width / cx, m_priTargetRegion[i].height / cy);
+        bool   downsampling  = (m_priRegionSize[i].width > m_priTargetRegion[i].width)
+                            || (m_priRegionSize[i].height > m_priTargetRegion[i].height);
         bool useLumaFilter = downsampling;
-        Picture::sampleRateConv(
-          scalingRatio, ::getComponentScaleX(compID, m_chromaFormat), ::getComponentScaleY(compID, m_chromaFormat),
-          beforeScaleSub, 0, 0, afterScaleSub, 0, 0, isLuma(compID) ? m_bitDepthY : m_bitDepthC,
-          downsampling || useLumaFilter ? true : isLuma(compID), downsampling, isLuma(compID) ? 1 : sps.getHorCollocatedChromaFlag(),
-          isLuma(compID) ? 1 : sps.getVerCollocatedChromaFlag(), false, false);
+        Picture::sampleRateConv(scalingRatio, ::getComponentScaleX(compID, m_chromaFormat),
+                                ::getComponentScaleY(compID, m_chromaFormat), beforeScaleSub, 0, 0, afterScaleSub, 0, 0,
+                                m_bitDepths[toChannelType(compID)],
+                                downsampling || useLumaFilter ? true : isLuma(compID), downsampling,
+                                isLuma(compID) ? 1 : sps.getHorCollocatedChromaFlag(),
+                                isLuma(compID) ? 1 : sps.getVerCollocatedChromaFlag(), false, false);
       }
     }
   }

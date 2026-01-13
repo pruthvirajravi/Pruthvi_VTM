@@ -321,10 +321,9 @@ bool Slice::getRapPicFlag() const
 
 void Slice::sortPicList(PicList &picList)
 {
-  picList.sort([](Picture *const &a, Picture *const &b) {
-    // process higher layers first to be able to resolve dependent layers when flushing
-    return a->getPOC() < b->getPOC() || (a->getPOC() == b->getPOC() && a->layerId > b->layerId);
-  });
+  // sort pictures by output order
+  picList.sort([](Picture* const& a, Picture* const& b)
+               { return a->getPOC() < b->getPOC() || (a->getPOC() == b->getPOC() && a->layerId < b->layerId); });
 }
 
 Picture* Slice::xGetRefPic( PicList& rcListPic, const int poc, const int layerId )

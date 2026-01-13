@@ -471,8 +471,7 @@ bool tryDecodePicture(Picture *pcEncPic, const int expectedPoc, const std::strin
 //! \{
 
 DecLib::DecLib()
-  : m_maxRefPicNum(0)
-  , m_isFirstGeneralHrd(true)
+  : m_isFirstGeneralHrd(true)
   , m_prevGeneralHrdParams()
   , m_latestDRAPPOC(MAX_INT)
   , m_latestEDRAPPOC(MAX_INT)
@@ -545,7 +544,7 @@ DecLib::DecLib()
   , m_maxDecSliceAddrInSubPic(-1)
   , m_clsVPSid(0)
 #if GDR_ENABLED
-  , m_lastGdrPoc (-1)
+  , m_lastGdrPoc(-1)
   , m_lastGdrRecoveryPocCnt(0)
 #endif
   , m_targetSubPicIdx(0)
@@ -659,79 +658,69 @@ void DecLib::deletePicBuffer ( )
   m_cReshaper.destroy();
 }
 
-Picture* DecLib::xGetNewPicBuffer( const SPS &sps, const PPS &pps, const uint32_t temporalLayer, const int layerId )
+Picture* DecLib::xGetNewPicBuffer(const SPS* sps, const PPS* pps, const uint32_t temporalLayer, const int layerId)
 {
-  Picture * pcPic = nullptr;
-  // getMaxDecPicBuffering() has space for the picture currently being decoded
-  m_maxRefPicNum = (m_vps == nullptr || m_vps->m_numLayersInOls[m_vps->m_targetOlsIdx] == 1)
-                     ? sps.getMaxDecPicBuffering(temporalLayer)
-                     : m_vps->getMaxDecPicBuffering(temporalLayer);
+  Picture* pic = nullptr;
 
-  const bool allocateWrappedPic = (m_vps == nullptr || m_vps->m_numLayersInOls[m_vps->m_targetOlsIdx] == 1)
-                                    ? sps.getWrapAroundEnabledFlag()
-                                    : true;
-
-  const auto fullSize = sps.getResChangeInClvsEnabledFlag()
-                          ? std::optional(Size(sps.getMaxPicWidthInLumaSamples(), sps.getMaxPicHeightInLumaSamples()))
-                          : std::nullopt;
-
-  if (m_cListPic.size() < (uint32_t) m_maxRefPicNum)
+  // find slot in `m_cListPic` to reuse
+  for (Picture* p: m_cListPic)
   {
-    pcPic = new Picture();
-    pcPic->create(allocateWrappedPic, sps.getChromaFormatIdc(), Size(pps.getPicWidthInLumaSamples(), pps.getPicHeightInLumaSamples()),
-      sps.getMaxCUWidth(), sps.getMaxCUWidth() + PIC_MARGIN, true, layerId, fullSize, getShutterFilterFlag() );
-
-    m_cListPic.push_back( pcPic );
-
-    return pcPic;
-  }
-
-  bool bBufferIsAvailable = false;
-  for(auto * p: m_cListPic)
-  {
-    pcPic = p;  // workaround because range-based for-loops don't work with existing variables
-    if ( pcPic->reconstructed == false && ! pcPic->neededForOutput && pcPic->layerId == layerId )
+    if (!p->neededForOutput && p->layerId == layerId && (!p->referenced || !p->reconstructed))
     {
-      pcPic->neededForOutput = false;
-      bBufferIsAvailable = true;
-      break;
-    }
-
-    if( ! pcPic->referenced  && ! pcPic->neededForOutput && pcPic->layerId == layerId )
-    {
-      pcPic->neededForOutput = false;
-      pcPic->reconstructed = false;
-      bBufferIsAvailable = true;
+      pic = p;
       break;
     }
   }
 
-  if( ! bBufferIsAvailable )
+  const bool singleLayer = (m_vps == nullptr || m_vps->m_numLayersInOls[m_vps->m_targetOlsIdx] == 1);
+  const auto picSize     = Size(pps->getPicWidthInLumaSamples(), pps->getPicHeightInLumaSamples());
+
+  bool createPic = false;
+  if (pic == nullptr)
   {
-    //There is no room for this picture, either because of faulty encoder or dropped NAL. Extend the buffer.
-    m_maxRefPicNum++;
+    const uint32_t maxTemporalId = singleLayer
+                                     ? sps->getMaxTLayers() - 1
+                                     : m_vps->m_dpbMaxTemporalId[m_vps->getOlsDpbParamsIdx(m_vps->m_targetOlsIdx)];
+    const size_t maxDecPicBuffering =
+      singleLayer ? sps->getMaxDecPicBuffering(maxTemporalId) : m_vps->getMaxDecPicBuffering(maxTemporalId);
 
-    pcPic = new Picture();
-
-    m_cListPic.push_back( pcPic );
-
-    pcPic->create(allocateWrappedPic, sps.getChromaFormatIdc(), Size(pps.getPicWidthInLumaSamples(), pps.getPicHeightInLumaSamples()), sps.getMaxCUWidth(), sps.getMaxCUWidth() + PIC_MARGIN, true, layerId, fullSize, getShutterFilterFlag());
-  }
-  else
-  {
-    if( !pcPic->Y().Size::operator==( Size( pps.getPicWidthInLumaSamples(), pps.getPicHeightInLumaSamples() ) ) || pps.pcv->maxCUWidth != sps.getMaxCUWidth() || pps.pcv->maxCUHeight != sps.getMaxCUHeight() || pcPic->layerId != layerId )
+    if (m_cListPic.size() >= maxDecPicBuffering)
     {
-      pcPic->destroy();
-
-      pcPic->create(allocateWrappedPic, sps.getChromaFormatIdc(), Size( pps.getPicWidthInLumaSamples(), pps.getPicHeightInLumaSamples() ), sps.getMaxCUWidth(), sps.getMaxCUWidth() + PIC_MARGIN, true, layerId, fullSize, getShutterFilterFlag());
+      // TODO: check whether the condition above is correct in the context of the current VTM implementation
+      // which may keep pictures in buffer for longer than strictly necessary
+#if 0
+      // There is no room for this picture, either because of faulty encoder or dropped NAL. Extend the buffer.
+      msg(WARNING,
+          "Warning: No picture buffer available for a new picture, increasing DPB size beyond signalled limit (%d)\n",
+          maxDecPicBuffering);
+#endif
     }
+
+    pic = new Picture();
+    m_cListPic.push_back(pic);
+    createPic = true;
+  }
+  else if (pic->Y().size() != picSize)
+  {
+    pic->destroy();
+    createPic = true;
   }
 
-  pcPic->setBorderExtension( false );
-  pcPic->neededForOutput = false;
-  pcPic->reconstructed = false;
+  if (createPic)
+  {
+    // always allocate wrapped pic for multi-layer bitstreams
+    const bool allocateWrappedPic = singleLayer ? sps->getWrapAroundEnabledFlag() : true;
 
-  return pcPic;
+    // Note: full size not needed when `bDecoder` is true
+    pic->create(allocateWrappedPic, sps->getChromaFormatIdc(), picSize, sps->getMaxCUWidth(),
+                sps->getMaxCUWidth() + PIC_MARGIN, true, layerId, std::nullopt, getShutterFilterFlag());
+  }
+
+  pic->setBorderExtension(false);
+  pic->neededForOutput = false;
+  pic->reconstructed   = false;
+
+  return pic;
 }
 
 #if JVET_AJ0151_DSC_SEI
@@ -1158,7 +1147,8 @@ void DecLib::xUpdateRasInit(Slice* slice)
 void DecLib::xCreateLostPicture( int iLostPoc, const int layerId )
 {
   msg( INFO, "\ninserting lost poc : %d\n",iLostPoc);
-  Picture *cFillPic = xGetNewPicBuffer( *( m_parameterSetManager.getFirstSPS() ), *( m_parameterSetManager.getFirstPPS() ), 0, layerId );
+  Picture* cFillPic =
+    xGetNewPicBuffer(m_parameterSetManager.getFirstSPS(), m_parameterSetManager.getFirstPPS(), 0, layerId);
 
   CHECK( !cFillPic->slices.size(), "No slices in picture" );
 
@@ -1198,55 +1188,64 @@ void DecLib::xCreateLostPicture( int iLostPoc, const int layerId )
   }
 }
 
-void  DecLib::xCreateUnavailablePicture( const PPS *pps, const int iUnavailablePoc, const bool longTermFlag, const int temporalId, const int layerId, const bool interLayerRefPicFlag )
+void DecLib::xCreateUnavailablePicture(const PPS* pps, const int unavailablePoc, const bool longTermFlag,
+                                       const int temporalId, const int layerId, const bool interLayerRefPicFlag)
 {
-  msg(INFO, "Note: Inserting unavailable POC : %d\n", iUnavailablePoc);
-  auto const sps = m_parameterSetManager.getSPS(pps->getSPSId());
-  Picture* cFillPic = xGetNewPicBuffer( *sps, *pps, 0, layerId );
+  msg(INFO, "Note: Inserting unavailable picture with POC = %d\n", unavailablePoc);
 
-  cFillPic->cs      = new CodingStructure(g_xuPool);
-  cFillPic->cs->sps = sps;
-  cFillPic->cs->pps = pps;
-  cFillPic->cs->vps = m_parameterSetManager.getVPS(sps->getVPSId());
-  cFillPic->cs->create(cFillPic->cs->sps->getChromaFormatIdc(), Area(0, 0, cFillPic->cs->pps->getPicWidthInLumaSamples(), cFillPic->cs->pps->getPicHeightInLumaSamples()), true, (bool)(cFillPic->cs->sps->getPLTMode()));
-  cFillPic->allocateNewSlice();
-  cFillPic->m_chromaFormatIdc = sps->getChromaFormatIdc();
-  cFillPic->m_bitDepths = sps->getBitDepths();
+  SPS* sps = m_parameterSetManager.getSPS(pps->getSPSId());
+  VPS* vps = m_parameterSetManager.getVPS(sps->getVPSId());
 
-  cFillPic->slices[0]->initSlice();
+  Picture* fillPic = xGetNewPicBuffer(sps, pps, 0, layerId);
 
-  cFillPic->setDecodingOrderNumber(0);
-  cFillPic->subLayerNonReferencePictureDueToSTSA = false;
-  cFillPic->unscaledPic = cFillPic;
+  fillPic->cs      = new CodingStructure(g_xuPool);
+  fillPic->cs->sps = sps;
+  fillPic->cs->pps = pps;
+  fillPic->cs->vps = vps;
+  fillPic->cs->create(sps->getChromaFormatIdc(),
+                      Area(0, 0, pps->getPicWidthInLumaSamples(), pps->getPicHeightInLumaSamples()), true,
+                      sps->getPLTMode());
 
-  uint32_t yFill = 1 << (sps->getBitDepth(ChannelType::LUMA) - 1);
-  uint32_t cFill = 1 << (sps->getBitDepth(ChannelType::CHROMA) - 1);
-  cFillPic->getRecoBuf().Y().fill(yFill);
-  cFillPic->getRecoBuf().Cb().fill(cFill);
-  cFillPic->getRecoBuf().Cr().fill(cFill);
+  fillPic->m_chromaFormatIdc = sps->getChromaFormatIdc();
+  fillPic->m_bitDepths       = sps->getBitDepths();
 
-  //  for(int ctuRsAddr=0; ctuRsAddr<cFillPic->getNumberOfCtusInFrame(); ctuRsAddr++)  { cFillPic->getCtu(ctuRsAddr)->initCtu(cFillPic, ctuRsAddr); }
-  cFillPic->referenced = true;
-  cFillPic->interLayerRefPicFlag = interLayerRefPicFlag;
-  cFillPic->longTerm = longTermFlag;
-  cFillPic->slices[0]->setPOC(iUnavailablePoc);
-  cFillPic->poc = iUnavailablePoc;
-  if( (cFillPic->slices[0]->getTLayer() == 0) && (cFillPic->slices[0]->getNalUnitType() != NAL_UNIT_CODED_SLICE_RASL) && (cFillPic->slices[0]->getNalUnitType() != NAL_UNIT_CODED_SLICE_RADL) )
+  fillPic->allocateNewSlice();   // Sets slice VPS/SPS/PPS/APS pointers
+
+  Slice* slice = fillPic->slices.front();
+  slice->initSlice();
+  slice->setPOC(unavailablePoc);
+  // picture header is not derived for generated reference picture
+  slice->setPicHeader(nullptr);
+
+  fillPic->setDecodingOrderNumber(0);
+  fillPic->subLayerNonReferencePictureDueToSTSA = false;
+  fillPic->unscaledPic                          = fillPic;
+
+  for (auto& blk: fillPic->blocks)
   {
-    m_prevTid0POC = cFillPic->slices[0]->getPOC();
+    const ComponentID compID  = blk.compID;
+    const Pel         midGray = 1 << (sps->getBitDepth(toChannelType(compID)) - 1);
+    fillPic->getRecoBuf().get(compID).fill(midGray);
   }
 
-  cFillPic->reconstructed = true;
-  cFillPic->neededForOutput = false;
-  // picture header is not derived for generated reference picture
-  cFillPic->slices[0]->setPicHeader( nullptr );
-  cFillPic->temporalId = temporalId;
-  cFillPic->nonReferencePictureFlag = false;
-  cFillPic->slices[0]->setPPS( pps );
+  fillPic->referenced           = true;
+  fillPic->interLayerRefPicFlag = interLayerRefPicFlag;
+  fillPic->longTerm             = longTermFlag;
+  fillPic->poc                  = unavailablePoc;
+  if (slice->getTLayer() == 0 && slice->getNalUnitType() != NAL_UNIT_CODED_SLICE_RASL
+      && slice->getNalUnitType() != NAL_UNIT_CODED_SLICE_RADL)
+  {
+    m_prevTid0POC = slice->getPOC();
+  }
+
+  fillPic->reconstructed           = true;
+  fillPic->neededForOutput         = false;
+  fillPic->temporalId              = temporalId;
+  fillPic->nonReferencePictureFlag = false;
 
   if (m_pocRandomAccess == MAX_INT)
   {
-    m_pocRandomAccess = iUnavailablePoc;
+    m_pocRandomAccess = unavailablePoc;
   }
 }
 
@@ -2219,7 +2218,7 @@ void DecLib::xActivateParameterSets( const InputNALUnit nalu )
                                                            m_apcSlicePilot->getRpl(REF_PIC_LIST_1), layerId, *pps);
 
     //  Get a new picture buffer. This will also set up m_pcPic, and therefore give us a SPS and PPS pointer that we can use.
-    m_pcPic = xGetNewPicBuffer( *sps, *pps, m_apcSlicePilot->getTLayer(), layerId );
+    m_pcPic = xGetNewPicBuffer(sps, pps, m_apcSlicePilot->getTLayer(), layerId);
 
     m_pcPic->finalInit( vps, *sps, *pps, &m_picHeader, apss, lmcsAPS, scalinglistAPS );
 #if GDR_ENABLED

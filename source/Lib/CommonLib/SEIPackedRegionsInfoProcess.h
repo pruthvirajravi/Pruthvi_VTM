@@ -58,14 +58,6 @@ public:
     : m_layerId(0)
     , m_enabled(false)
     , m_persistence(false)
-    , m_picWidth(0)
-    , m_picHeight(0)
-    , m_maxPicWidth(0)
-    , m_maxPicHeight(0)
-    , m_targetPicWidth(0)
-    , m_targetPicHeight(0)
-    , m_bitDepthY(10)
-    , m_bitDepthC(10)
     , m_priUnitSize(1)
     , m_chromaFormat(ChromaFormat::_420)
     , m_subWidthC(2)
@@ -82,14 +74,10 @@ public:
   int                   m_layerId;
   bool                  m_enabled;
   bool                  m_persistence;
-  uint32_t              m_picWidth;
-  uint32_t              m_picHeight;
-  uint32_t              m_maxPicWidth;
-  uint32_t              m_maxPicHeight;
-  uint32_t              m_targetPicWidth;
-  uint32_t              m_targetPicHeight;
-  uint32_t              m_bitDepthY;
-  uint32_t              m_bitDepthC;
+  Size                  m_picSize;
+  Size                  m_maxPicSize;
+  Size                  m_targetPicSize;
+  BitDepths             m_bitDepths;
   uint32_t              m_priUnitSize;
   ChromaFormat          m_chromaFormat;
   uint32_t              m_subWidthC;
@@ -99,16 +87,14 @@ public:
   bool                  m_priUseMaxDimensionsFlag;
   std::vector<uint32_t> m_priRegionTopLeftX;
   std::vector<uint32_t> m_priRegionTopLeftY;
-  std::vector<uint32_t> m_priRegionWidth;
-  std::vector<uint32_t> m_priRegionHeight;
+  std::vector<Size>     m_priRegionSize;
   std::vector<uint32_t> m_priResampleWidthNum;
   std::vector<uint32_t> m_priResampleWidthDenom;
   std::vector<uint32_t> m_priResampleHeightNum;
   std::vector<uint32_t> m_priResampleHeightDenom;
   std::vector<uint32_t> m_priTargetRegionTopLeftX;
   std::vector<uint32_t> m_priTargetRegionTopLeftY;
-  std::vector<uint32_t> m_priTargetRegionWidth;
-  std::vector<uint32_t> m_priTargetRegionHeight;
+  std::vector<Size>     m_priTargetRegion;
   std::vector<uint32_t> m_priRegionId;
   std::vector<uint32_t> m_regionLayerId;
   std::vector<uint8_t>  m_regionIsALayerFlag;

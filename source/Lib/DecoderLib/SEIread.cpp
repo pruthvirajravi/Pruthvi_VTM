@@ -5364,10 +5364,8 @@ void SEIReader::xParsePackedRegionsInfo(SEIPackedRegionsInfo& sei, const uint32_
       sei.m_resamplingWidthDenomMinus1[i] = val;
       if (sei.m_targetPicParamsPresentFlag)
       {
-        Fraction horRatio;
-        horRatio.num = sei.m_resamplingWidthNumMinus1[i] + 1;
-        horRatio.den = sei.m_resamplingWidthDenomMinus1[i] + 1;
-        double horRatioVal = horRatio.getFloatVal();
+        const double horRatioVal =
+          Fraction(sei.m_resamplingWidthNumMinus1[i] + 1, sei.m_resamplingWidthDenomMinus1[i] + 1).getFloatVal();
         CHECK(horRatioVal < 1.0 / 16.0 || horRatioVal > 16.0, "(pri_resampling_width_num_minus1[i] + 1) / (pri_resampling_width_denom_minus1[i] + 1) shall be in the range of 1/16 to 16, inclusive");
       }
       sei_read_flag(pDecodedMessageOutputStream, val, "pri_fixed_aspect_ratio_flag[i]");

@@ -886,8 +886,11 @@ struct Fraction
   int num = 0;
   int den = 1;
 
-  int    getIntValRound() const { return (num + den / 2) / den; }
-  double getFloatVal() const { return static_cast<double>(num) / den; }
+  constexpr Fraction() = default;
+  constexpr Fraction(int n, int d) : num(n), den(d) {}
+
+  constexpr int    getIntValRound() const { return (num + den / 2) / den; }
+  constexpr double getFloatVal() const { return static_cast<double>(num) / den; }
 };
 
 inline bool operator==(const Fraction& a, const Fraction& b) { return a.num == b.num && a.den == b.den; }
