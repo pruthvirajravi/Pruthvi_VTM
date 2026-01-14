@@ -63,7 +63,6 @@
 #define BIM_IMPROVEMENT_FROM_JVET_AN0267                  1
 #endif
 
-#define JVET_AM0280_DECODER_MEMORY_PRINT                  1 // JVET-AM0280: Decoder memory print
 #define JVET_AN0058          1                       // JVET-AN0058: On the NNPF SEI messages
 
 #define JVET_AM0060_OMI_SAMPLE_RANGE_FIX 1           // JVET-AN0060: On the OMI SEI message
