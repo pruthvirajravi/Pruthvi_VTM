@@ -2081,6 +2081,11 @@ bool InterSearch::xRectHashInterEstimation(PredictionUnit& pu, RefPicList& bestR
         }
       }
       m_numHashMVStoreds[eRefPicList][refIdx] = 0;
+      if (pu.cu->slice->getRefPic(eRefPicList, refIdx)->layerId != pu.cu->slice->getNalUnitLayerId() 
+        && pu.cu->slice->getRefPOC(eRefPicList, refIdx) == pu.cu->slice->getPOC())
+      {
+        continue;
+      }
 
       const ScalingRatio &scaleRatio = pu.cu->slice->getScalingRatio(eRefPicList, refIdx);
       if( scaleRatio != SCALE_1X )
@@ -2383,6 +2388,11 @@ bool InterSearch::xHashInterEstimation(PredictionUnit& pu, RefPicList& bestRefPi
         }
       }
       m_numHashMVStoreds[eRefPicList][refIdx] = 0;
+      if (pu.cu->slice->getRefPic(eRefPicList, refIdx)->layerId != pu.cu->slice->getNalUnitLayerId() 
+        && pu.cu->slice->getRefPOC(eRefPicList, refIdx) == pu.cu->slice->getPOC())
+      {
+        continue;
+      }
 
       const ScalingRatio &scaleRatio = pu.cu->slice->getScalingRatio(eRefPicList, refIdx);
       if( scaleRatio != SCALE_1X )
