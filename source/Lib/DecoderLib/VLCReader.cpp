@@ -48,6 +48,23 @@
 #include "CommonLib/AdaptiveLoopFilter.h"
 #include "CommonLib/ProfileTierLevel.h"
 
+static bool profileHasPaletteOffConstraint(const Profile::Name profile)
+{
+  switch (profile)
+  {
+  case Profile::MAIN_10:
+  case Profile::MAIN_10_STILL_PICTURE:
+  case Profile::MULTILAYER_MAIN_10:
+  case Profile::MULTILAYER_MAIN_10_STILL_PICTURE:
+  case Profile::MAIN_12:
+  case Profile::MAIN_12_INTRA:
+  case Profile::MAIN_12_STILL_PICTURE:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // ====================================================================================================================
 // Protected member functions
 // ====================================================================================================================
@@ -1953,8 +1970,7 @@ void HLSyntaxReader::parseSPS(SPS* pcSPS)
     pcSPS->setVerCollocatedChromaFlag(true);
   }
   xReadFlag( uiCode,  "sps_palette_enabled_flag");                                pcSPS->setPLTMode                ( uiCode != 0 );
-  CHECK((profile == Profile::MAIN_12 || profile == Profile::MAIN_12_INTRA || profile == Profile::MAIN_12_STILL_PICTURE)
-    && uiCode != 0, "sps_palette_enabled_flag shall be equal to 0 for Main 12 (420) profiles");
+  CHECK(profileHasPaletteOffConstraint(profile) && uiCode != 0, "sps_palette_enabled_flag shall be equal to 0 for signalled profile");
   if (pcSPS->getChromaFormatIdc() == ChromaFormat::_444 && pcSPS->getLog2MaxTbSize() != 6)
   {
     xReadFlag(uiCode, "sps_act_enabled_flag");                                pcSPS->setUseColorTrans(uiCode != 0);
