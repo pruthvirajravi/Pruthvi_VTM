@@ -58,6 +58,11 @@
 #define JVET_AN0237_FILM_GRAIN_ANALYSIS                   1 // film grain analysis improvements
 #define JVET_AN0348                                       1
 
+#define TF_IMPROVEMENT_FROM_JVET_AN0267                   1
+#if TF_IMPROVEMENT_FROM_JVET_AN0267
+#define BIM_IMPROVEMENT_FROM_JVET_AN0267                  1
+#endif
+
 #define JVET_AN0058          1                       // JVET-AN0058: On the NNPF SEI messages
 
 #define JVET_AM0060_OMI_SAMPLE_RANGE_FIX 1           // JVET-AN0060: On the OMI SEI message

@@ -742,7 +742,12 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
     {
       if (currTestMode.qp >= 0)
       {
-        updateLambda (&slice, currTestMode.qp,
+        updateLambda (&slice, 
+#if BIM_IMPROVEMENT_FROM_JVET_AN0267
+                     currTestMode.qp + currTestMode.deltaQPForLambda,
+#else
+                     currTestMode.qp,
+#endif
  #if WCG_EXT && ER_CHROMA_QP_WCG_PPS
                       m_pcEncCfg->getWCGChromaQPControl().isEnabled(),
  #endif
@@ -1038,7 +1043,12 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
 }
 
 #if SHARP_LUMA_DELTA_QP || ENABLE_QPA_SUB_CTU
-void EncCu::updateLambda(Slice *slice, const int dQP,
+void EncCu::updateLambda(Slice *slice,
+#if BIM_IMPROVEMENT_FROM_JVET_AN0267
+                         const double dQP,
+#else
+                         const int dQP,
+#endif
 #if WCG_EXT && ER_CHROMA_QP_WCG_PPS
                          const bool useWCGChromaControl,
 #endif
@@ -1048,13 +1058,13 @@ void EncCu::updateLambda(Slice *slice, const int dQP,
   if (useWCGChromaControl)
   {
     const double lambda = m_pcSliceEncoder->initializeLambda (slice, m_pcSliceEncoder->getGopId(), slice->getSliceQp(), (double)dQP);
-    const int clippedQP = Clip3(-slice->getSPS()->getQpBDOffset(ChannelType::LUMA), MAX_QP, dQP);
+    const int clippedQP = Clip3(-slice->getSPS()->getQpBDOffset(ChannelType::LUMA), MAX_QP, (int)dQP);
 
     m_pcSliceEncoder->setUpLambda (slice, lambda, clippedQP);
     return;
   }
 #endif
-  int          qp        = dQP;
+  int          qp        = (int)dQP;
   const double oldQP     = (double)slice->getSliceQpBase();
 #if ENABLE_QPA_SUB_CTU
   const double oldLambda =
