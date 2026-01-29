@@ -531,7 +531,7 @@ namespace DQIntern
 
       const unsigned size       = isY ? tuPars.m_height : tuPars.m_width;
       const int      log2Size   = ceilLog2(size);
-      const CtxSet  &ctxSetLast = (isY ? Ctx::LastY : Ctx::LastX)[to_underlying(chType)];
+      const CtxSet  &ctxSetLast = isY ? Ctx::LastY[to_underlying(chType)] : Ctx::LastX[to_underlying(chType)];
       const unsigned lastShift  = isLuma(chType) ? (log2Size + 1) >> 2 : Clip3<unsigned>(0, 2, size >> 3);
       const unsigned lastOffset = isLuma(chType) ? CoeffCodingContext::prefixCtx[log2Size] : 0;
       const int      nzSize     = getNonzeroTuSize(size);
