@@ -84,6 +84,7 @@ void DscSubstream::initSubstream(int hashMethod)
   {
     printf ("DSC warning: initializing substream that was not signed or verified\n");
     EVP_MD_CTX_free(m_ctx);
+    m_ctx = nullptr;
   }
 
   m_ctx = EVP_MD_CTX_new();
@@ -107,6 +108,7 @@ bool DscSubstream::addDatapacket(const char *data, size_t length)
     printf ("Stream already verified, cannot add data.\n");
     return false;
   }
+  CHECK(m_ctx == nullptr, "substream verification context is not initialized");
 
   if (!EVP_DigestUpdate(m_ctx, data, length))
   {
@@ -146,6 +148,7 @@ bool DscSubstream::calculateHash()
 
   EVP_MD_CTX_free(m_ctx);
   m_ctx = nullptr;
+  m_streamStatus = DSC_Verified;
 
   m_currentDigest.resize(lengthOfHash);
   std::memcpy(m_currentDigest.data(), hash, lengthOfHash);
