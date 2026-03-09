@@ -5792,8 +5792,11 @@ void EncGOP::xCalculateAddPSNR(Picture* pcPic, PelUnitBuf cPicD, const AccessUni
 #if JVET_AN0348
     m_gcAnalyzeWPSNR.setUpscaledOutput(m_pcEncLib->getUpscaledOutput());
     m_gcAnalyzeWPSNR.setcodedPictureSize(decodedLumaWidth, decodedLumaHeight);
-#endif
+    m_gcAnalyzeWPSNR.addResult(dPSNRWeighted, (double) uibits, MSEyuvframeWeighted, upscaledPSNRWeighted, msssim,
+                               upscaledMsssim, isEncodeLtRef);
+#else
     m_gcAnalyzeWPSNR.addResult( dPSNRWeighted, (double)uibits, MSEyuvframeWeighted, upscaledPSNR, msssim, upscaledMsssim, isEncodeLtRef );
+#endif
   }
 #endif
 

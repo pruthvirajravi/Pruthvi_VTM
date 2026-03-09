@@ -854,7 +854,7 @@ void Slice::decodingRefreshMarking(int& pocCRA, bool& bRefreshPending, PicList& 
         while (iterPic != rcListPic.end())
         {
           rpcPic = *(iterPic);
-          if (rpcPic->getPOC() != pocCurr && rpcPic->getPOC() != m_iLastIDR)
+          if (rpcPic->getPOC() != pocCurr && rpcPic->getPOC() != m_iLastIDR && rpcPic->layerId == m_nuhLayerId)
           {
             rpcPic->referenced = false;
             rpcPic->getHashMap()->clearAll();
@@ -872,7 +872,7 @@ void Slice::decodingRefreshMarking(int& pocCRA, bool& bRefreshPending, PicList& 
         while (iterPic != rcListPic.end())
         {
           rpcPic = *(iterPic);
-          if (rpcPic->getPOC() != pocCurr && rpcPic->getPOC() != pocCRA)
+          if (rpcPic->getPOC() != pocCurr && rpcPic->getPOC() != pocCRA && rpcPic->layerId == m_nuhLayerId)
           {
             rpcPic->referenced = false;
             rpcPic->getHashMap()->clearAll();

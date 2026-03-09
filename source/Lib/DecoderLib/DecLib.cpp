@@ -734,10 +734,6 @@ void DecLib::xInitDscSubstreamManager(SEIMessages &SEIs)
       printf ("Warning: received more than one Digitally Signed Content Initialization SEI message at a time. Using first only.\n");
     }
     SEIDigitallySignedContentInitialization* dsci = (SEIDigitallySignedContentInitialization*) dscInitSEIs.front();
-    if (m_dscSubstreamManagerMap[dsci->dsciId].isVerificationActive())
-    {
-      return;
-    }
     m_dscSubstreamManagerMap[dsci->dsciId].initDscSubstreamManager(dsci->dsciNumVerificationSubstreams, dsci->dsciHashMethodType, dsci->dsciKeySourceUri,
                                                   dsci->dsciContentUuidPresentFlag, dsci->dsciContentUuid, dsci->dsciRefSubstreamFlag, dsci->dsciVSSImplicitAssociationModeFlag, dsci->dsciSEISigningFlag);
     if (!m_dscSubstreamManagerMap[dsci->dsciId].initVerificator(m_keyStoreDir, m_trustStoreDir))
