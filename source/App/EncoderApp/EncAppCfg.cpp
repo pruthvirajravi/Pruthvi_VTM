@@ -3373,7 +3373,7 @@ bool EncAppCfg::parseCfg( int argc, char* argv[] )
     CHECK(m_chromaQpMappingTableParams.m_qpTableStartMinus26[2] < -QP26 - qpBdOffsetC
             || m_chromaQpMappingTableParams.m_qpTableStartMinus26[2] > 36,
           "qpTableStartMinus26[2] is out of valid range of -26 -qpBdOffsetC to 36, inclusive.")
-    CHECK(cfg_qpInValCbCr.values[0] != cfg_qpInValCbCr.values[0], "First qpInValCbCr value should be equal to first qpOutValCbCr value");
+    CHECK(cfg_qpInValCbCr.values[0] != cfg_qpOutValCbCr.values[0], "First qpInValCbCr value should be equal to first qpOutValCbCr value");
     for (int i = 0; i < cfg_qpInValCbCr.values.size() - 1; i++)
     {
       CHECK(cfg_qpInValCbCr.values[i] < -qpBdOffsetC || cfg_qpInValCbCr.values[i] > MAX_QP, "Some entries cfg_qpInValCbCr are out of valid range of -qpBdOffsetC to 63, inclusive.");
