@@ -4156,6 +4156,7 @@ bool EncAppCfg::parseCfg( int argc, char* argv[] )
     }
     else
     {
+      m_siiSEISubLayerNumUnitsInSI.push_back(cfg_siiSEIInputNumUnitsInSI.values[0]);
       m_siiSEINumUnitsInShutterInterval = cfg_siiSEIInputNumUnitsInSI.values[0];
       assert(m_siiSEINumUnitsInShutterInterval >= 0 && m_siiSEINumUnitsInShutterInterval <= MAX_UINT);
     }

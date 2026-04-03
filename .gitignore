@@ -17,3 +17,4 @@ deploy
 /doc/_minted-software-manual/
 /.idea/
 /cmake-build-*/
+*.DS_Store
