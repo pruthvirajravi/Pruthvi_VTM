@@ -2285,11 +2285,7 @@ void SEIWriter::xWriteSEINeuralNetworkPostFilterActivation(const SEINeuralNetwor
     xWriteFlag(sei.m_selectedInputFlag, "nnpfa_selected_input_flag");
     if (sei.m_selectedInputFlag)
     {
-#if JVET_AN0058
       xWriteUvlc((uint32_t)sei.m_numInputPicShift - 1, "nnpfa_num_input_pic_shift_minus1");
-#else
-      xWriteUvlc((uint32_t)sei.m_numInputPicShift, "nnpfa_num_input_pic_shift");
-#endif
     }
 
   }

@@ -57,7 +57,6 @@
 //########### place macros to be removed in next cycle below this line ###############
 
 
-#define JVET_AN0058          1                       // JVET-AN0058: On the NNPF SEI messages
 
 #define JVET_AM0060_OMI_SAMPLE_RANGE_FIX 1           // JVET-AN0060: On the OMI SEI message
 
