@@ -59,7 +59,6 @@
 
 
 
-#define JVET_AN0062_GENERATIVE_AUR_RESTRICTIONS  1   // JVET-AN0062 item 1: Generative AI usage restrictions
 
 //########### place macros to be be kept below this line ###############
 

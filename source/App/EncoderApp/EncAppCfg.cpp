@@ -836,11 +836,7 @@ bool EncAppCfg::parseCfg( int argc, char* argv[] )
   SMultiValueInput<double>     cfg_generativeFaceVideoEnhancementSEIPupilRightEyeCoordinateX            (-50960.0, 50960.0, 0, 5095000);
   SMultiValueInput<double>     cfg_generativeFaceVideoEnhancementSEIPupilRightEyeCoordinateY            (-50960.0, 50960.0, 0, 5095000);
 
-  #if JVET_AN0062_GENERATIVE_AUR_RESTRICTIONS
   SMultiValueInput<uint32_t>   cfg_aurSEIRestrictions                                        (0, MAX_AUR_RESTRICTION, 0, std::numeric_limits<uint32_t>::max());
-  #else
-  SMultiValueInput<uint32_t>   cfg_aurSEIRestrictions                                        (0, 2, 0, std::numeric_limits<uint32_t>::max());
-  #endif
   SMultiValueInput<bool>       cfg_aurSEIContextPresentFlag                                  (0, 1, 0, 4096);
   SMultiValueInput<uint32_t>   cfg_aurSEIContext                                             (0, 15, 0, std::numeric_limits<uint32_t>::max());
   SMultiValueInput<bool>       cfg_aurSEIExclusionFlag                                       (0, 1, 0, 4096);
