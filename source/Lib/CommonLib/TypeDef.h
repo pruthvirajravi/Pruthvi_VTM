@@ -58,7 +58,6 @@
 
 
 
-#define JVET_AM0060_OMI_SAMPLE_RANGE_FIX 1           // JVET-AN0060: On the OMI SEI message
 
 #define JVET_AN0062_GENERATIVE_AUR_RESTRICTIONS  1   // JVET-AN0062 item 1: Generative AI usage restrictions
 

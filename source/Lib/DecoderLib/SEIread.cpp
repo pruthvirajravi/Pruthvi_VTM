@@ -2268,13 +2268,8 @@ void SEIReader::xParseSEIObjectMaskInfos(SEIObjectMaskInfos& sei, uint32_t paylo
           if (j > 0)
           {
             uint32_t omiAuxSampleRangeDeltaMin = !sei.m_hdr.m_tolerancePresentFlag ? 0 : sei.m_auxSampleTolerance[i];
-#if JVET_AM0060_OMI_SAMPLE_RANGE_FIX
             uint32_t omiAuxSampleRangeDeltaMax = !sei.m_hdr.m_tolerancePresentFlag ? 0 : sei.m_auxSampleTolerance[i];
             CHECK((objMaskInfo.auxSampleValue - omiAuxSampleRangeDeltaMin) <= (prevAuxSampleValue + omiAuxSampleRangeDeltaMax), "It is a requirement of bitstream conformance that omi_aux_sample_value[ i ][ j ] - OmiAuxSampleRangeDeltaMin[ i ] shall be greater than omi_aux_sample_value[ i ][ j - 1 ] + OmiAuxSampleRangeDeltaMax[ i ]");
-#else
-            uint32_t omiAuxSampleRangeDeltaMax = (!sei.m_hdr.m_tolerancePresentFlag || sei.m_auxSampleTolerance[i] == 0) ? 1 : sei.m_auxSampleTolerance[i];
-            CHECK((objMaskInfo.auxSampleValue - omiAuxSampleRangeDeltaMin) < (prevAuxSampleValue + omiAuxSampleRangeDeltaMax), "It is a requirement of bitstream conformance that omi_aux_sample_value[ i ][ j ] - OmiAuxSampleRangeDeltaMin[ i ] shall be greater than or equal to omi_aux_sample_value[ i ][ j - 1 ] + OmiAuxSampleRangeDeltaMax[ i ]");
-#endif
           }
           prevAuxSampleValue = objMaskInfo.auxSampleValue;
           sei_read_flag(pDecodedMessageOutputStream, val, "omi_mask_bounding_box_present_flag[i][j]");
