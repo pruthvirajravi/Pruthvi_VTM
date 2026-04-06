@@ -582,9 +582,7 @@ static constexpr double SII_PF_W1 =                                       0.4; /
 static const uint32_t MAX_GFV_ID =                                 0xfffffffe; // Maximum supported GFV_id
 static const uint32_t MAX_GFVE_ID =                                 0xfffffffe; // Maximum supported GFVE_id
 static const uint32_t MAX_NUM_IMAGE_FORMAT_METADATA_SEI =                  16; // Max num of image format metadata SEI
-#if JVET_AN0062_GENERATIVE_AUR_RESTRICTIONS
 static const uint32_t MAX_AUR_RESTRICTION =                                 5;
-#endif
 
 // ====================================================================================================================
 // Macro functions

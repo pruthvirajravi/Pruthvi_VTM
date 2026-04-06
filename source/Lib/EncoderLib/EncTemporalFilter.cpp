@@ -49,29 +49,6 @@ const double EncTemporalFilter::m_sigmaMultiplier =  9.0;
 const double EncTemporalFilter::m_sigmaZeroPoint  = 10.0;
 const int EncTemporalFilter::m_motionVectorFactor = 16;
 const int EncTemporalFilter::m_padding = 128;
-#if !TF_IMPROVEMENT_FROM_JVET_AN0267
-// clang-format off
-const int16_t EncTemporalFilter::m_interpolationFilter[16][NTAPS] =
-{
-  {   0,   0,  64,   0,   0,   0 },  // 0
-  {   1,  -3,  64,   4,  -2,   0 },  // 1 -->-->
-  {   1,  -6,  62,   9,  -3,   1 },  // 2 -->
-  {   2,  -8,  60,  14,  -5,   1 },  // 3 -->-->
-  {   2,  -9,  57,  19,  -7,   2 },  // 4
-  {   3, -10,  53,  24,  -8,   2 },  // 5 -->-->
-  {   3, -11,  50,  29,  -9,   2 },  // 6 -->
-  {   3, -11,  44,  35, -10,   3 },  // 7 -->-->
-  {   1,  -7,  38,  38,  -7,   1 },  // 8
-  {   3, -10,  35,  44, -11,   3 },  // 9 -->-->
-  {   2,  -9,  29,  50, -11,   3 },  // 10-->
-  {   2,  -8,  24,  53, -10,   3 },  // 11-->-->
-  {   2,  -7,  19,  57,  -9,   2 },  // 12
-  {   1,  -5,  14,  60,  -8,   2 },  // 13-->-->
-  {   1,  -3,   9,  62,  -6,   1 },  // 14-->
-  {   0,  -2,   4,  64,  -3,   1 }   // 15-->-->
-};
-// clang-format on
-#endif
 
 const double EncTemporalFilter::m_refStrengths[2][4] = {
   // abs(POC offset)
@@ -102,16 +79,8 @@ void EncTemporalFilter::init(const int frameSkip, const BitDepths &inputBitDepth
                              const InputColourSpaceConversion colorSpaceConv, const int qp,
                              const std::map<int, double> &temporalFilterStrengths, const int pastRefs,
                              const int futureRefs, const int firstValidFrame, const int lastValidFrame,
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
                              const bool mctfEnabled, const int unitSize,
-#else
-                             const bool mctfEnabled,
-#endif
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                              std::map<int, double*>* adaptQPmap, const bool bimEnabled, const int bimSize)
-#else
-                             std::map<int, int*>* adaptQPmap, const bool bimEnabled, const int ctuSize)
-#endif
 {
   m_frameSkip = frameSkip;
   m_inputBitDepth       = inputBitDepth;
@@ -142,18 +111,11 @@ void EncTemporalFilter::init(const int frameSkip, const BitDepths &inputBitDepth
   m_lastValidFrame  = lastValidFrame;
   m_mctfEnabled = mctfEnabled;
   m_bimEnabled = bimEnabled;
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
   m_numBimBlocks = ((width + bimSize - 1) / bimSize) * ((height + bimSize - 1) / bimSize);
   m_bimSize      = bimSize;
-#else
-  m_numCtu = ((width + ctuSize - 1) / ctuSize) * ((height + ctuSize - 1) / ctuSize);
-  m_ctuSize = ctuSize;
-#endif
   m_ctuAdaptedQP = adaptQPmap;
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
   m_unitSize = unitSize;
   m_if.initInterpolationFilter(true);
-#endif
 }
 
 // ====================================================================================================================
@@ -270,13 +232,9 @@ bool EncTemporalFilter::filter(PelStorage *orgPic, int receivedPoc)
         break;
       }
       srcPic.picBuffer.extendBorderPel(m_padding, m_padding);
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
       const int wInBlks = (m_area.width + m_unitSize - 1) / m_unitSize;
       const int hInBlks = (m_area.height + m_unitSize - 1) / m_unitSize;
       srcPic.mvs.allocate(wInBlks, hInBlks);
-#else
-      srcPic.mvs.allocate(m_sourceWidth / 4, m_sourceHeight / 4);
-#endif
 
       motionEstimation(srcPic.mvs, origPadded, srcPic.picBuffer, origSubsampled2, origSubsampled4);
       srcPic.origOffset = poc - currentFilePoc;
@@ -307,7 +265,6 @@ bool EncTemporalFilter::filter(PelStorage *orgPic, int receivedPoc)
     {
       const int bimFirstFrame = std::max(currentFilePoc - 2, firstFrame);
       const int bimLastFrame  = std::min(currentFilePoc + 2, lastFrame);
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
       int bimDeriveSize        = m_bimSize;
       int numBimDeriveBlocks   = m_numBimBlocks;
       int ratioDerivedAndFinal = 1;
@@ -320,20 +277,12 @@ bool EncTemporalFilter::filter(PelStorage *orgPic, int receivedPoc)
       }
       std::vector<double> sumError(numBimDeriveBlocks * 2, 0);
       std::vector<double> blkCount(numBimDeriveBlocks * 2, 0);
-#else
-      std::vector<double> sumError(m_numCtu * 2, 0);
-      std::vector<int>    blkCount(m_numCtu * 2, 0);
-#endif
 
       int frameIndex = bimFirstFrame - firstFrame;
 
       int distFactor[2] = {3,3};
 
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
       double* qpMap = new double[numBimDeriveBlocks];
-#else
-      int* qpMap = new int[m_numCtu];
-#endif
       for (int poc = bimFirstFrame; poc <= bimLastFrame; poc++)
       {
         if ((poc < 0) || (poc == currentFilePoc) || (frameIndex >= numRefs))
@@ -343,7 +292,6 @@ bool EncTemporalFilter::filter(PelStorage *orgPic, int receivedPoc)
         int dist = abs(poc - currentFilePoc) - 1;
         distFactor[dist]--;
         TemporalFilterSourcePicInfo &srcPic = srcFrameInfo.at(frameIndex);
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
         for (int y = 0; y < srcPic.mvs.h(); y++)   // going over in block steps
         {
           for (int x = 0; x < srcPic.mvs.w(); x++)
@@ -356,25 +304,10 @@ bool EncTemporalFilter::filter(PelStorage *orgPic, int receivedPoc)
             blkCount[dist * numBimDeriveBlocks + bimId] += srcPic.mvs.get(x, y).overlap;
           }
         }
-#else
-        for (int y = 0; y < srcPic.mvs.h() / 2; y++) // going over in 8x8 block steps
-        {
-          for (int x = 0; x < srcPic.mvs.w() / 2; x++)
-          {
-            int blocksPerRow = (srcPic.mvs.w() / 2 + (m_ctuSize / 8 - 1)) / (m_ctuSize / 8);
-            int ctuX = x / (m_ctuSize / 8);
-            int ctuY = y / (m_ctuSize / 8);
-            int ctuId = ctuY * blocksPerRow + ctuX;
-            sumError[dist * m_numCtu + ctuId] += srcPic.mvs.get(x, y).error;
-            blkCount[dist * m_numCtu + ctuId] += 1;
-          }
-        }
-#endif
         frameIndex++;
       }
       double weight = (receivedPoc % 16) ? 0.6 : 1;
       const double center = 45.0;
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
       const double a = -3.0;
       const double b = 2.0 / 3.0 / 10.0;
       for (int i = 0; i < numBimDeriveBlocks; i++)
@@ -406,36 +339,6 @@ bool EncTemporalFilter::filter(PelStorage *orgPic, int receivedPoc)
       {
         m_ctuAdaptedQP->insert({ receivedPoc, qpMap });
       }
-#else
-      for (int i = 0; i < m_numCtu; i++)
-      {
-        int avgErrD1 = (int)((sumError[i] / blkCount[i]) * distFactor[0]);
-        int avgErrD2 = (int)((sumError[i + m_numCtu] / blkCount[i + m_numCtu]) * distFactor[1]);
-        int weightedErr = std::max(avgErrD1, avgErrD2) + abs(avgErrD2 - avgErrD1) * 3;
-        weightedErr = (int)(weightedErr * weight + (1 - weight) * center);
-        if (weightedErr > m_cuTreeThresh[0])
-        {
-          qpMap[i] = 2;
-        }
-        else if (weightedErr > m_cuTreeThresh[1])
-        {
-          qpMap[i] = 1;
-        }
-        else if (weightedErr < m_cuTreeThresh[3])
-        {
-          qpMap[i] = -2;
-        }
-        else if (weightedErr < m_cuTreeThresh[2])
-        {
-          qpMap[i] = -1;
-        }
-        else
-        {
-          qpMap[i] = 0;
-        }
-      }
-      m_ctuAdaptedQP->insert({ receivedPoc, qpMap });
-#endif
     }
 
     if ( m_mctfEnabled && ( numRefs > 0 ) )
@@ -486,7 +389,6 @@ void EncTemporalFilter::subsampleLuma(const PelStorage &input, PelStorage &outpu
 int64_t EncTemporalFilter::motionErrorLuma(const PelStorage& orig, const PelStorage& buffer, const int x, const int y,
                                            int dx, int dy, const int bs, const int64_t besterror)
 {
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
   const Pel*      origOrigin = orig.Y().buf;
   const ptrdiff_t origStride = orig.Y().stride;
   const Pel*      buffOrigin = buffer.Y().buf;
@@ -599,128 +501,6 @@ int64_t EncTemporalFilter::motionErrorLuma(const PelStorage& orig, const PelStor
       }
     }
   }
-#else
-  const int  dxFrac  = dx & 15;
-  const int  dyFrac  = dy & 15;
-  const int  dxInt   = dx >> 4;
-  const int  dyInt   = dy >> 4;
-  const auto xFilter = m_interpolationFilter[dxFrac];
-  const auto yFilter = m_interpolationFilter[dyFrac];
-
-  const ptrdiff_t origStride = orig.Y().stride;
-  const ptrdiff_t buffStride = buffer.Y().stride;
-
-  const Pel* origOrigin = orig.Y().buf + y * origStride + x;
-  const Pel* buffOrigin = buffer.Y().buf + (y + dyInt) * buffStride + (x + dxInt);
-
-  int64_t error = 0;   // int64_t to avoid overflow at higher bit depths
-  const Pel maxSampleValue = (1 << m_internalBitDepth[ChannelType::LUMA]) - 1;
-
-  if (dxFrac == 0)
-  {
-    if (dyFrac == 0)
-    {
-      // No filtering required
-      for (int y1 = 0; y1 < bs; y1++)
-      {
-        for (int x1 = 0; x1 < bs; x1++)
-        {
-          const Pel diff = origOrigin[y1 * origStride + x1] - buffOrigin[y1 * buffStride + x1];
-          error += diff * diff;
-        }
-      }
-    }
-    else
-    {
-      // Vertical filter only
-      for (int y1 = 0; y1 < bs; y1++)
-      {
-        for (int x1 = 0; x1 < bs; x1++)
-        {
-          const Pel* buffStart = &buffOrigin[(y1 - HALF_NTAPS) * buffStride + x1];
-
-          int sum = 1 << 5;   // rounding offset
-          for (int k = 0; k < NTAPS; k++)
-          {
-            sum += buffStart[k * buffStride] * yFilter[k];
-          }
-          sum >>= 6;
-          sum = std::clamp<int>(sum, 0, maxSampleValue);
-
-          const Pel diff = origOrigin[y1 * origStride + x1] - sum;
-          error += diff * diff;
-        }
-      }
-    }
-  }
-  else
-  {
-    if (dyFrac == 0)
-    {
-      // Horizontal filter only
-      for (int y1 = 0; y1 < bs; y1++)
-      {
-        for (int x1 = 0; x1 < bs; x1++)
-        {
-          const Pel* buffStart = &buffOrigin[y1 * buffStride + (x1 - HALF_NTAPS)];
-
-          int sum = 1 << 5;   // rounding offset
-          for (int k = 0; k < NTAPS; k++)
-          {
-            sum += buffStart[k] * xFilter[k];
-          }
-          sum >>= 6;
-          sum = std::clamp<int>(sum, 0, maxSampleValue);
-
-          const Pel diff = origOrigin[y1 * origStride + x1] - sum;
-          error += diff * diff;
-        }
-      }
-    }
-    else
-    {
-      constexpr int MAX_BS = 16;
-      CHECK(bs > MAX_BS, "block size is too large");
-      int tempArray[(MAX_BS + NTAPS - 1) * MAX_BS];
-
-      // Horizontal filter
-      for (int y1 = 0; y1 < bs + NTAPS - 1; y1++)
-      {
-        for (int x1 = 0; x1 < bs; x1++)
-        {
-          const Pel* buffStart = &buffOrigin[(y1 - HALF_NTAPS) * buffStride + (x1 - HALF_NTAPS)];
-
-          int sum = 0;
-          for (int k = 0; k < NTAPS; k++)
-          {
-            sum += buffStart[k] * xFilter[k];
-          }
-          tempArray[y1 * bs + x1] = sum;
-        }
-      }
-
-      // Vertical filter
-      for (int y1 = 0; y1 < bs; y1++)
-      {
-        for (int x1 = 0; x1 < bs; x1++)
-        {
-          const int* tempStart = &tempArray[y1 * bs + x1];
-
-          int sum = 1 << 11;   // rounding offset
-          for (int k = 0; k < NTAPS; k++)
-          {
-            sum += tempStart[k * bs] * yFilter[k];
-          }
-          sum >>= 12;
-          sum = std::clamp<int>(sum, 0, maxSampleValue);
-
-          const Pel diff = origOrigin[y1 * origStride + x1] - sum;
-          error += diff * diff;
-        }
-      }
-    }
-  }
-#endif
 
   return error;
 }
@@ -738,15 +518,9 @@ void EncTemporalFilter::motionEstimationLuma(Array2D<MotionVector> &mvs, const P
   const double offset   = 5.0 / (1 << (2 * BASELINE_BIT_DEPTH - 16)) * (1 << (2 * bitShift - 16));
   const double scale    = 50.0 / (1 << (2 * BASELINE_BIT_DEPTH - 16)) * (1 << (2 * bitShift - 16));
 
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
   for (int blockY = 0; blockY < origHeight; blockY += stepSize)
   {
     for (int blockX = 0; blockX < origWidth; blockX += stepSize)
-#else
-  for (int blockY = 0; blockY + blockSize <= origHeight; blockY += stepSize)
-  {
-    for (int blockX = 0; blockX + blockSize <= origWidth; blockX += stepSize)
-#endif
     {
       MotionVector best;
 
@@ -844,7 +618,6 @@ void EncTemporalFilter::motionEstimationLuma(Array2D<MotionVector> &mvs, const P
         }
       }
 
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
       const int bw  = std::min<int>(blockSize, orig.Y().width - blockX);
       const int bh  = std::min<int>(blockSize, orig.Y().height - blockY);
 
@@ -872,32 +645,6 @@ void EncTemporalFilter::motionEstimationLuma(Array2D<MotionVector> &mvs, const P
       best.error   = (int) (20 * ((best.error + offset) / (variance + offset)) + (best.error / (bw * bh)) / scale);
       best.overlap = ((double) bw * bh) / (m_unitSize * m_unitSize);
       mvs.get(blockX / stepSize, blockY / stepSize) = best;
-#else
-      // calculate average
-      double avg = 0.0;
-      for (int x1 = 0; x1 < blockSize; x1++)
-      {
-        for (int y1 = 0; y1 < blockSize; y1++)
-        {
-          avg = avg + orig.Y().at(blockX + x1, blockY + y1);
-        }
-      }
-      avg = avg / (blockSize * blockSize);
-
-      // calculate variance
-      double variance = 0;
-      for (int x1 = 0; x1 < blockSize; x1++)
-      {
-        for (int y1 = 0; y1 < blockSize; y1++)
-        {
-          int pix = orig.Y().at(blockX + x1, blockY + y1);
-          variance = variance + (pix - avg) * (pix - avg);
-        }
-      }
-      best.error = (int64_t) (20 * ((best.error + offset) / (variance + offset)))
-                   + (int64_t) (best.error / (blockSize * blockSize) / scale);
-      mvs.get(blockX / stepSize, blockY / stepSize) = best;
-#endif
     }
   }
 }
@@ -906,15 +653,9 @@ void EncTemporalFilter::motionEstimation(Array2D<MotionVector> &mv, const PelSto
 {
   const int width  = m_sourceWidth;
   const int height = m_sourceHeight;
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
   Array2D<MotionVector> mv0(width / (m_unitSize / 8) + 1, height / (m_unitSize / 8) + 1);
   Array2D<MotionVector> mv1(width / (m_unitSize / 4) + 1, height / (m_unitSize / 4) + 1);
   Array2D<MotionVector> mv2(width / (m_unitSize / 2) + 1, height / (m_unitSize / 2) + 1);
-#else
-  Array2D<MotionVector> mv_0(width / 16, height / 16);
-  Array2D<MotionVector> mv_1(width / 16, height / 16);
-  Array2D<MotionVector> mv_2(width / 16, height / 16);
-#endif
 
   PelStorage bufferSub2;
   PelStorage bufferSub4;
@@ -922,28 +663,16 @@ void EncTemporalFilter::motionEstimation(Array2D<MotionVector> &mv, const PelSto
   subsampleLuma(buffer, bufferSub2);
   subsampleLuma(bufferSub2, bufferSub4);
 
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
   motionEstimationLuma(mv0, origSubsampled4, bufferSub4, 2 * m_unitSize);
   motionEstimationLuma(mv1, origSubsampled2, bufferSub2, 2 * m_unitSize, &mv0, 2);
   motionEstimationLuma(mv2, orgPic, buffer, 2 * m_unitSize, &mv1, 2);
 
   motionEstimationLuma(mv, orgPic, buffer, m_unitSize, &mv2, 1, true);
-#else
-  motionEstimationLuma(mv_0, origSubsampled4, bufferSub4, 16);
-  motionEstimationLuma(mv_1, origSubsampled2, bufferSub2, 16, &mv_0, 2);
-  motionEstimationLuma(mv_2, orgPic, buffer, 16, &mv_1, 2);
-
-  motionEstimationLuma(mv, orgPic, buffer, 8, &mv_2, 1, true);
-#endif
 }
 
 void EncTemporalFilter::applyMotion(const Array2D<MotionVector> &mvs, const PelStorage &input, PelStorage &output)
 {
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
   const int lumaBlockSize = m_unitSize;
-#else
-  static const int lumaBlockSize = 8;
-#endif
 
   for (int c = 0; c < getNumberValidComponents(m_chromaFormatIdc); c++)
   {
@@ -954,15 +683,11 @@ void EncTemporalFilter::applyMotion(const Array2D<MotionVector> &mvs, const PelS
     const int blockSizeY = lumaBlockSize >> csy;
     const int height = input.bufs[c].height;
     const int width  = input.bufs[c].width;
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
     ClpRng clpRng;
     clpRng.min = 0;
     clpRng.max = (1 << m_internalBitDepth[toChannelType(compID)]) - 1;
     clpRng.bd  = m_internalBitDepth[toChannelType(compID)];
     clpRng.n   = 0;
-#else
-    const Pel maxValue = (1 << m_internalBitDepth[toChannelType(compID)]) - 1;
-#endif
 
     const Pel *srcImage = input.bufs[c].buf;
     const ptrdiff_t srcStride = input.bufs[c].stride;
@@ -970,19 +695,12 @@ void EncTemporalFilter::applyMotion(const Array2D<MotionVector> &mvs, const PelS
     Pel *dstImage = output.bufs[c].buf;
     ptrdiff_t dstStride = output.bufs[c].stride;
 
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
     for (int y = 0, blockNumY = 0; y < height; y += blockSizeY, blockNumY++)
     {
       const int bh = std::min(blockSizeY, height - y);
       for (int x = 0, blockNumX = 0; x < width; x += blockSizeX, blockNumX++)
-#else
-    for (int y = 0, blockNumY = 0; y + blockSizeY <= height; y += blockSizeY, blockNumY++)
-    {
-      for (int x = 0, blockNumX = 0; x + blockSizeX <= width; x += blockSizeX, blockNumX++)
-#endif
       {
         const MotionVector &mv = mvs.get(blockNumX,blockNumY);
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
         const int bw = std::min(blockSizeX, width - x);
         const int xInt = mv.x >> (4 + csx);
         const int yInt = mv.y >> (4 + csy);
@@ -1034,57 +752,6 @@ void EncTemporalFilter::applyMotion(const Array2D<MotionVector> &mvs, const PelS
           m_if.filterVer(compID, tempArray + margin * tempArrayStride, tempArrayStride, dstImage + y * dstStride + x,
                           dstStride, bw, bh, yFrac, false, true, clpRng, filterIdx);
         }
-#else
-        const int dx = mv.x >> csx ;
-        const int dy = mv.y >> csy ;
-        const int xInt = mv.x >> (4 + csx) ;
-        const int yInt = mv.y >> (4 + csy) ;
-
-        const auto xFilter = m_interpolationFilter[dx & 0xf];
-        const auto yFilter = m_interpolationFilter[dy & 0xf];   // will add 6 bit.
-
-        constexpr int MAX_BS = 16;
-        CHECK(blockSizeX > MAX_BS, "block width is too large");
-        CHECK(blockSizeY > MAX_BS, "block height is too large");
-        int tempArray[(MAX_BS + NTAPS - 1) * MAX_BS];
-
-        for (int by = 0; by < blockSizeY + NTAPS - 1; by++)
-        {
-          const int  yOffset   = y + by + yInt - HALF_NTAPS;
-          const Pel *sourceRow = srcImage + yOffset * srcStride;
-          for (int bx = 0; bx < blockSizeX; bx++)
-          {
-            int        base     = x + bx + xInt - HALF_NTAPS;
-            const Pel *rowStart = sourceRow + base;
-
-            int sum = 0;
-            for (int k = 0; k < NTAPS; k++)
-            {
-              sum += xFilter[k] * rowStart[k];
-            }
-
-            tempArray[by * blockSizeX + bx] = sum;
-          }
-        }
-
-        Pel* dstRow = dstImage + y * dstStride + x;
-        for (int by = 0; by < blockSizeY; by++, dstRow += dstStride)
-        {
-          for (int bx = 0; bx < blockSizeX; bx++)
-          {
-            int sum = 0;
-
-            for (int k = 0; k < NTAPS; k++)
-            {
-              sum += yFilter[k] * tempArray[(by + k) * blockSizeX + bx];
-            }
-
-            sum = (sum + (1 << 11)) >> 12;
-            sum        = std::clamp<int>(sum, 0, maxValue);
-            dstRow[bx] = sum;
-          }
-        }
-#endif
       }
     }
   }
@@ -1123,11 +790,7 @@ void EncTemporalFilter::bilateralFilter(const PelStorage& orgPic, std::deque<Tem
     const int    bitShift = m_internalBitDepth[ChannelType::LUMA];
     const double offset   = 5.0 / (1 << (2 * BASELINE_BIT_DEPTH - 16)) * (1 << (2 * bitShift - 16));
 
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
     const int lumaBlockSize = m_unitSize;
-#else
-    const int lumaBlockSize = 8;
-#endif
     const int csx           = getComponentScaleX(compID, m_chromaFormatIdc);
     const int csy           = getComponentScaleY(compID, m_chromaFormatIdc);
     const int blockSizeX = lumaBlockSize >> csx;
@@ -1137,14 +800,10 @@ void EncTemporalFilter::bilateralFilter(const PelStorage& orgPic, std::deque<Tem
     {
       const Pel *srcPel = srcPelRow;
       Pel *dstPel = dstPelRow;
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
       const int  bh     = std::min(blockSizeY, height - y);
-#endif
       for (int x = 0; x < width; x++, srcPel++, dstPel++)
       {
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
         const int bw                = std::min(blockSizeX, width - x);
-#endif
         const int orgVal            = (int) *srcPel;
         double temporalWeightSum = 1.0;
         double newVal = (double) orgVal;
@@ -1155,36 +814,22 @@ void EncTemporalFilter::bilateralFilter(const PelStorage& orgPic, std::deque<Tem
             double variance = 0, diffsum = 0;
             const ptrdiff_t refStride = correctedPics[i].bufs[c].stride;
             const Pel *     refPel    = correctedPics[i].bufs[c].buf + y * refStride + x;
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
             for (int y1 = 0; y1 < bh; y1++)
             {
               for (int x1 = 0; x1 < bw; x1++)
-#else
-            for (int y1 = 0; y1 < blockSizeY; y1++)
-            {
-              for (int x1 = 0; x1 < blockSizeX; x1++)
-#endif
               {
                 const Pel pix  = *(srcPel + srcStride * y1 + x1);
                 const Pel ref  = *(refPel + refStride * y1 + x1);
                 const int diff = pix - ref;
                 variance += diff * diff;
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
                 if (x1 != bw - 1)
-#else
-                if (x1 != blockSizeX - 1)
-#endif
                 {
                   const Pel pixR  = *(srcPel + srcStride * y1 + x1 + 1);
                   const Pel refR  = *(refPel + refStride * y1 + x1 + 1);
                   const int diffR = pixR - refR;
                   diffsum += (diffR - diff) * (diffR - diff);
                 }
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
                 if (y1 != bh - 1)
-#else
-                if (y1 != blockSizeY - 1)
-#endif
                 {
                   const Pel pixD  = *(srcPel + srcStride * y1 + x1 + srcStride);
                   const Pel refD  = *(refPel + refStride * y1 + x1 + refStride);
@@ -1193,11 +838,7 @@ void EncTemporalFilter::bilateralFilter(const PelStorage& orgPic, std::deque<Tem
                 }
               }
             }
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
             const int cntV = bw * bh;
-#else
-            const int cntV = blockSizeX * blockSizeY;
-#endif
             const int cntD = 2 * cntV - blockSizeX - blockSizeY;
             srcFrameInfo[i].mvs.get(x / blockSizeX, y / blockSizeY).noise =
               (int) round((15.0 * cntD / cntV * variance + offset) / (diffsum + offset));

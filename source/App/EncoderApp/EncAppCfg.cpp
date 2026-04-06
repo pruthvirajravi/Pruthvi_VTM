@@ -836,11 +836,7 @@ bool EncAppCfg::parseCfg( int argc, char* argv[] )
   SMultiValueInput<double>     cfg_generativeFaceVideoEnhancementSEIPupilRightEyeCoordinateX            (-50960.0, 50960.0, 0, 5095000);
   SMultiValueInput<double>     cfg_generativeFaceVideoEnhancementSEIPupilRightEyeCoordinateY            (-50960.0, 50960.0, 0, 5095000);
 
-  #if JVET_AN0062_GENERATIVE_AUR_RESTRICTIONS
   SMultiValueInput<uint32_t>   cfg_aurSEIRestrictions                                        (0, MAX_AUR_RESTRICTION, 0, std::numeric_limits<uint32_t>::max());
-  #else
-  SMultiValueInput<uint32_t>   cfg_aurSEIRestrictions                                        (0, 2, 0, std::numeric_limits<uint32_t>::max());
-  #endif
   SMultiValueInput<bool>       cfg_aurSEIContextPresentFlag                                  (0, 1, 0, 4096);
   SMultiValueInput<uint32_t>   cfg_aurSEIContext                                             (0, 15, 0, std::numeric_limits<uint32_t>::max());
   SMultiValueInput<bool>       cfg_aurSEIExclusionFlag                                       (0, 1, 0, 4096);
@@ -1334,12 +1330,8 @@ bool EncAppCfg::parseCfg( int argc, char* argv[] )
   ("SmoothQPReductionModelScaleInter",                m_smoothQPReductionModelScaleInter,                 -1.0, "Scale parameter of the QP reduction model for inter pictures")
   ("SmoothQPReductionModelOffsetInter",               m_smoothQPReductionModelOffsetInter,                27.0, "Offset parameter of the QP reduction model for inter pictures")
   ("SmoothQPReductionLimitInter",                     m_smoothQPReductionLimitInter,                        -4, "Threshold parameter for controlling maximum amount of QP reduction by the QP reduction model for inter pictures")
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
   ("BIM",                                             m_bimEnabled,                                          0, "Block Importance Mapping QP adaptation depending on estimated propagation of reference samples. 0 = Off, 1 = On with QP and lambda adaptation, 2 = On with lambda adaptation only")
   ("BIMUnitSize",                                     m_bimUnitSize,                                        32, "Block size for derivation of BIM offsets (applied on CTU size)")
-#else
-  ("BIM",                                             m_bimEnabled,                                      false, "Block Importance Mapping QP adaptation depending on estimated propagation of reference samples.")
-#endif
   ("UseIdentityTableForNon420Chroma",                 m_useIdentityTableForNon420Chroma,                  true, "True: Indicates that 422/444 chroma uses identity chroma QP mapping tables; False: explicit Qp table may be specified in config")
   ("SameCQPTablesForAllChroma",                       m_chromaQpMappingTableParams.m_sameCQPTableForAllChromaFlag,                        true, "0: Different tables for Cb, Cr and joint Cb-Cr components, 1 (default): Same tables for all three chroma components")
   ("QpInValCb",                                       cfg_qpInValCb,                            cfg_qpInValCb, "Input coordinates for the QP table for Cb component")
@@ -1987,9 +1979,7 @@ bool EncAppCfg::parseCfg( int argc, char* argv[] )
 
   opts.addOptions()
     ("TemporalFilter",               m_gopBasedTemporalFilterEnabled,                     false, "Enable GOP based temporal filter. Disabled per default")
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
     ("TemporalFilterUnitSize",       m_gopBasedTemporalFilterUnitSize,                       16, "Block size for GOP based temporal filtering operation")
-#endif
     ("TemporalFilterPastRefs",       m_gopBasedTemporalFilterPastRefs,          TF_DEFAULT_REFS, "Number of past references for temporal prefilter")
     ("TemporalFilterFutureRefs",     m_gopBasedTemporalFilterFutureRefs,        TF_DEFAULT_REFS, "Number of future references for temporal prefilter")
     ("FirstValidFrame",              m_firstValidFrame,                                       0, "First valid frame")
@@ -6481,14 +6471,12 @@ bool EncAppCfg::xCheckParameter()
     {
       msg(WARNING, "Number of frames used for temporal prefilter is different from default.\n");
     }
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
     xConfirmPara(m_gopBasedTemporalFilterUnitSize < 8,
                  "GOP Based Temmporal Fitler unit size has to be bigger or equal than 8");
     xConfirmPara(m_gopBasedTemporalFilterUnitSize > 32,
                  "GOP Based Temmporal Fitler unit size has to be smaller or equal than 32");
     xConfirmPara(m_gopBasedTemporalFilterUnitSize & (m_gopBasedTemporalFilterUnitSize - 1),
                  "GOP Based Temmporal Fitler unit size has to be a power of 2");
-#endif
   }
   if (m_bimEnabled)
   {
