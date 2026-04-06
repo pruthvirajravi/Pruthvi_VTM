@@ -1987,9 +1987,7 @@ bool EncAppCfg::parseCfg( int argc, char* argv[] )
 
   opts.addOptions()
     ("TemporalFilter",               m_gopBasedTemporalFilterEnabled,                     false, "Enable GOP based temporal filter. Disabled per default")
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
     ("TemporalFilterUnitSize",       m_gopBasedTemporalFilterUnitSize,                       16, "Block size for GOP based temporal filtering operation")
-#endif
     ("TemporalFilterPastRefs",       m_gopBasedTemporalFilterPastRefs,          TF_DEFAULT_REFS, "Number of past references for temporal prefilter")
     ("TemporalFilterFutureRefs",     m_gopBasedTemporalFilterFutureRefs,        TF_DEFAULT_REFS, "Number of future references for temporal prefilter")
     ("FirstValidFrame",              m_firstValidFrame,                                       0, "First valid frame")
@@ -6480,14 +6478,12 @@ bool EncAppCfg::xCheckParameter()
     {
       msg(WARNING, "Number of frames used for temporal prefilter is different from default.\n");
     }
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
     xConfirmPara(m_gopBasedTemporalFilterUnitSize < 8,
                  "GOP Based Temmporal Fitler unit size has to be bigger or equal than 8");
     xConfirmPara(m_gopBasedTemporalFilterUnitSize > 32,
                  "GOP Based Temmporal Fitler unit size has to be smaller or equal than 32");
     xConfirmPara(m_gopBasedTemporalFilterUnitSize & (m_gopBasedTemporalFilterUnitSize - 1),
                  "GOP Based Temmporal Fitler unit size has to be a power of 2");
-#endif
   }
   if (m_bimEnabled)
   {

@@ -1924,9 +1924,7 @@ void EncApp::createLib( const int layerIdx )
       m_horCollocatedChromaFlag, m_verCollocatedChromaFlag,
       m_inputColourSpaceConvert, m_iQP, m_gopBasedTemporalFilterStrengths, m_gopBasedTemporalFilterPastRefs,
       m_gopBasedTemporalFilterFutureRefs, m_firstValidFrame, m_lastValidFrame, m_gopBasedTemporalFilterEnabled,
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
       m_gopBasedTemporalFilterUnitSize,
-#endif
 #if BIM_IMPROVEMENT_FROM_JVET_AN0267
       m_cEncLib.getAdaptQPmap(), m_cEncLib.getBIM(), m_bimUnitSize);
 #else
@@ -1943,9 +1941,7 @@ void EncApp::createLib( const int layerIdx )
       m_horCollocatedChromaFlag, m_verCollocatedChromaFlag,
       m_inputColourSpaceConvert, m_iQP, m_fgcSEITemporalFilterStrengths, m_fgcSEITemporalFilterPastRefs,
       m_fgcSEITemporalFilterFutureRefs, m_firstValidFrame, m_lastValidFrame, true,
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
       m_gopBasedTemporalFilterUnitSize,
-#endif
       m_cEncLib.getAdaptQPmap(), m_cEncLib.getBIM(), m_ctuSize);
   }
 }

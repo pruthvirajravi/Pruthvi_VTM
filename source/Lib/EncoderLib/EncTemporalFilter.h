@@ -39,9 +39,7 @@
 #define __TEMPORAL_FILTER__
 #include "CommonLib/Unit.h"
 #include "CommonLib/Buffer.h"
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
 #include "CommonLib/InterpolationFilter.h"
-#endif
 #include <sstream>
 #include <map>
 #include <deque>
@@ -54,12 +52,8 @@ struct MotionVector
 {
   int     x     = 0;
   int     y     = 0;
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
   double  overlap = 0;
   int64_t error   = INT_LEAST32_MAX;
-#else
-  int64_t error = std::numeric_limits<int64_t>::max();
-#endif
   int     noise = 0;
 
   MotionVector() = default;
@@ -130,11 +124,7 @@ public:
             const InputColourSpaceConversion colorSpaceConv, const int qp,
             const std::map<int, double>& temporalFilterStrengths, const int pastRefs, const int futureRefs,
             const int firstValidFrame, const int lastValidFrame,
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
             const bool mctfEnabled, const int unitSize,
-#else
-            const bool mctfEnabled,
-#endif
 #if BIM_IMPROVEMENT_FROM_JVET_AN0267
             std::map<int, double*>* adaptQPmap, const bool bimEnabled, const int bimSize);
 #else
@@ -152,11 +142,6 @@ private:
   static const double m_sigmaZeroPoint;
   static const int m_motionVectorFactor;
   static const int m_padding;
-#if !TF_IMPROVEMENT_FROM_JVET_AN0267
-  static constexpr int NTAPS      = 6;
-  static constexpr int HALF_NTAPS = (NTAPS - 1) / 2;
-  static const int16_t m_interpolationFilter[16][NTAPS];
-#endif
   static const double m_refStrengths[2][4];
   static const int m_cuTreeThresh[4];
 
@@ -188,10 +173,8 @@ private:
   int m_firstValidFrame;
   int m_lastValidFrame;
   bool m_mctfEnabled;
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
   int  m_unitSize;
   InterpolationFilter m_if;
-#endif
   bool m_bimEnabled;
 #if BIM_IMPROVEMENT_FROM_JVET_AN0267
   int m_numBimBlocks;

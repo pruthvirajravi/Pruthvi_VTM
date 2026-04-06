@@ -548,9 +548,7 @@ protected:
   bool      m_bFastUDIUseMPMEnabled;
   bool      m_bFastMEForGenBLowDelayEnabled;
   bool      m_gopBasedTemporalFilterEnabled;
-#if TF_IMPROVEMENT_FROM_JVET_AN0267
   int       m_gopBasedTemporalFilterUnitSize;
-#endif
 #if BIM_IMPROVEMENT_FROM_JVET_AN0267
   int       m_bimEnabled;
   int       m_bimUnitSize;
