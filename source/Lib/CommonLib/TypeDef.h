@@ -56,7 +56,6 @@
 
 //########### place macros to be removed in next cycle below this line ###############
 
-#define BIM_IMPROVEMENT_FROM_JVET_AN0267                  1
 
 #define JVET_AN0058          1                       // JVET-AN0058: On the NNPF SEI messages
 

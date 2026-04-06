@@ -1676,9 +1676,7 @@ void EncApp::xInitLibCfg( int layerIdx )
 
   m_cEncLib.setGopBasedTemporalFilterEnabled(m_gopBasedTemporalFilterEnabled);
   m_cEncLib.setBIM                                               ( m_bimEnabled );
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
   m_cEncLib.setBIMUnitSize                                       (m_bimUnitSize);
-#endif
   m_cEncLib.setNumRefLayers                                       ( m_numRefLayers );
 
   m_cEncLib.setVPSParameters(m_cfgVPSParameters);
@@ -1880,11 +1878,7 @@ void EncApp::createLib( const int layerIdx )
   }
   if ( m_bimEnabled )
   {
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
     std::map<int, double*> adaptQPmap;
-#else
-    std::map<int, int*> adaptQPmap;
-#endif
     m_cEncLib.setAdaptQPmap(adaptQPmap);
   }
 
@@ -1925,11 +1919,7 @@ void EncApp::createLib( const int layerIdx )
       m_inputColourSpaceConvert, m_iQP, m_gopBasedTemporalFilterStrengths, m_gopBasedTemporalFilterPastRefs,
       m_gopBasedTemporalFilterFutureRefs, m_firstValidFrame, m_lastValidFrame, m_gopBasedTemporalFilterEnabled,
       m_gopBasedTemporalFilterUnitSize,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
       m_cEncLib.getAdaptQPmap(), m_cEncLib.getBIM(), m_bimUnitSize);
-#else
-      m_cEncLib.getAdaptQPmap(), m_cEncLib.getBIM(), m_ctuSize);
-#endif
 
   }
   if ( m_fgcSEIAnalysisEnabled && m_fgcSEIExternalDenoised.empty() )

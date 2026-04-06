@@ -549,14 +549,9 @@ protected:
   bool      m_bFastMEForGenBLowDelayEnabled;
   bool      m_gopBasedTemporalFilterEnabled;
   int       m_gopBasedTemporalFilterUnitSize;
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
   int       m_bimEnabled;
   int       m_bimUnitSize;
   std::map<int, double*> m_adaptQPmap;
-#else
-  bool      m_bimEnabled;
-  std::map<int, int*> m_adaptQPmap;
-#endif
   bool      m_noPicPartitionFlag;                             ///< no picture partitioning flag (single tile, single slice)
   bool      m_mixedLossyLossless;                             ///< enable mixed lossy/lossless coding
 
@@ -2068,7 +2063,6 @@ public:
 
   void setGopBasedTemporalFilterEnabled(const bool b) { m_gopBasedTemporalFilterEnabled = b; }
   bool getGopBasedTemporalFilterEnabled() const { return m_gopBasedTemporalFilterEnabled; }
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
   void      setBIM                          (int bim)                 { m_bimEnabled = bim; }
   int       getBIM                          ()                  const { return m_bimEnabled; }
   void      setBIMUnitSize                  (int bimUnitSize)         { m_bimUnitSize = bimUnitSize; }
@@ -2077,13 +2071,6 @@ public:
   double*   getAdaptQPmap                   (int poc)                 { return m_adaptQPmap[poc]; }
   std::map<int, double*> *getAdaptQPmap     ()                        { return &m_adaptQPmap; }
   const std::map<int, double*>* getAdaptQPmap() const                 { return &m_adaptQPmap; }
-#else
-  void      setBIM                          (bool flag)               { m_bimEnabled = flag; }
-  bool      getBIM                          ()                        { return m_bimEnabled; }
-  void      setAdaptQPmap                   (std::map<int, int*> map) { m_adaptQPmap = map; }
-  int*      getAdaptQPmap                   (int poc)                 { return m_adaptQPmap[poc]; }
-  std::map<int, int*> *getAdaptQPmap        ()                        { return &m_adaptQPmap; }
-#endif
 
   void      setDPF                          (bool flag)               { m_dpfEnabled = flag; }
   void      setDPFKeyLen                    (int i)                   { m_dpfKeyLen = i; }

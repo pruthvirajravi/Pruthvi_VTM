@@ -80,11 +80,7 @@ void EncTemporalFilter::init(const int frameSkip, const BitDepths &inputBitDepth
                              const std::map<int, double> &temporalFilterStrengths, const int pastRefs,
                              const int futureRefs, const int firstValidFrame, const int lastValidFrame,
                              const bool mctfEnabled, const int unitSize,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                              std::map<int, double*>* adaptQPmap, const bool bimEnabled, const int bimSize)
-#else
-                             std::map<int, int*>* adaptQPmap, const bool bimEnabled, const int ctuSize)
-#endif
 {
   m_frameSkip = frameSkip;
   m_inputBitDepth       = inputBitDepth;
@@ -115,13 +111,8 @@ void EncTemporalFilter::init(const int frameSkip, const BitDepths &inputBitDepth
   m_lastValidFrame  = lastValidFrame;
   m_mctfEnabled = mctfEnabled;
   m_bimEnabled = bimEnabled;
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
   m_numBimBlocks = ((width + bimSize - 1) / bimSize) * ((height + bimSize - 1) / bimSize);
   m_bimSize      = bimSize;
-#else
-  m_numCtu = ((width + ctuSize - 1) / ctuSize) * ((height + ctuSize - 1) / ctuSize);
-  m_ctuSize = ctuSize;
-#endif
   m_ctuAdaptedQP = adaptQPmap;
   m_unitSize = unitSize;
   m_if.initInterpolationFilter(true);
@@ -274,7 +265,6 @@ bool EncTemporalFilter::filter(PelStorage *orgPic, int receivedPoc)
     {
       const int bimFirstFrame = std::max(currentFilePoc - 2, firstFrame);
       const int bimLastFrame  = std::min(currentFilePoc + 2, lastFrame);
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
       int bimDeriveSize        = m_bimSize;
       int numBimDeriveBlocks   = m_numBimBlocks;
       int ratioDerivedAndFinal = 1;
@@ -287,20 +277,12 @@ bool EncTemporalFilter::filter(PelStorage *orgPic, int receivedPoc)
       }
       std::vector<double> sumError(numBimDeriveBlocks * 2, 0);
       std::vector<double> blkCount(numBimDeriveBlocks * 2, 0);
-#else
-      std::vector<double> sumError(m_numCtu * 2, 0);
-      std::vector<int>    blkCount(m_numCtu * 2, 0);
-#endif
 
       int frameIndex = bimFirstFrame - firstFrame;
 
       int distFactor[2] = {3,3};
 
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
       double* qpMap = new double[numBimDeriveBlocks];
-#else
-      int* qpMap = new int[m_numCtu];
-#endif
       for (int poc = bimFirstFrame; poc <= bimLastFrame; poc++)
       {
         if ((poc < 0) || (poc == currentFilePoc) || (frameIndex >= numRefs))
@@ -310,7 +292,6 @@ bool EncTemporalFilter::filter(PelStorage *orgPic, int receivedPoc)
         int dist = abs(poc - currentFilePoc) - 1;
         distFactor[dist]--;
         TemporalFilterSourcePicInfo &srcPic = srcFrameInfo.at(frameIndex);
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
         for (int y = 0; y < srcPic.mvs.h(); y++)   // going over in block steps
         {
           for (int x = 0; x < srcPic.mvs.w(); x++)
@@ -323,25 +304,10 @@ bool EncTemporalFilter::filter(PelStorage *orgPic, int receivedPoc)
             blkCount[dist * numBimDeriveBlocks + bimId] += srcPic.mvs.get(x, y).overlap;
           }
         }
-#else
-        for (int y = 0; y < srcPic.mvs.h() / 2; y++) // going over in 8x8 block steps
-        {
-          for (int x = 0; x < srcPic.mvs.w() / 2; x++)
-          {
-            int blocksPerRow = (srcPic.mvs.w() / 2 + (m_ctuSize / 8 - 1)) / (m_ctuSize / 8);
-            int ctuX = x / (m_ctuSize / 8);
-            int ctuY = y / (m_ctuSize / 8);
-            int ctuId = ctuY * blocksPerRow + ctuX;
-            sumError[dist * m_numCtu + ctuId] += srcPic.mvs.get(x, y).error;
-            blkCount[dist * m_numCtu + ctuId] += 1;
-          }
-        }
-#endif
         frameIndex++;
       }
       double weight = (receivedPoc % 16) ? 0.6 : 1;
       const double center = 45.0;
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
       const double a = -3.0;
       const double b = 2.0 / 3.0 / 10.0;
       for (int i = 0; i < numBimDeriveBlocks; i++)
@@ -373,36 +339,6 @@ bool EncTemporalFilter::filter(PelStorage *orgPic, int receivedPoc)
       {
         m_ctuAdaptedQP->insert({ receivedPoc, qpMap });
       }
-#else
-      for (int i = 0; i < m_numCtu; i++)
-      {
-        int avgErrD1 = (int)((sumError[i] / blkCount[i]) * distFactor[0]);
-        int avgErrD2 = (int)((sumError[i + m_numCtu] / blkCount[i + m_numCtu]) * distFactor[1]);
-        int weightedErr = std::max(avgErrD1, avgErrD2) + abs(avgErrD2 - avgErrD1) * 3;
-        weightedErr = (int)(weightedErr * weight + (1 - weight) * center);
-        if (weightedErr > m_cuTreeThresh[0])
-        {
-          qpMap[i] = 2;
-        }
-        else if (weightedErr > m_cuTreeThresh[1])
-        {
-          qpMap[i] = 1;
-        }
-        else if (weightedErr < m_cuTreeThresh[3])
-        {
-          qpMap[i] = -2;
-        }
-        else if (weightedErr < m_cuTreeThresh[2])
-        {
-          qpMap[i] = -1;
-        }
-        else
-        {
-          qpMap[i] = 0;
-        }
-      }
-      m_ctuAdaptedQP->insert({ receivedPoc, qpMap });
-#endif
     }
 
     if ( m_mctfEnabled && ( numRefs > 0 ) )

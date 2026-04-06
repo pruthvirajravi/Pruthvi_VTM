@@ -1132,12 +1132,8 @@ protected:
   int                   m_gopBasedTemporalFilterFutureRefs;
   std::map<int, double> m_gopBasedTemporalFilterStrengths;             ///< Filter strength per frame for the GOP-based Temporal Filter
   int                   m_gopBasedTemporalFilterUnitSize;
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
   int                   m_bimEnabled;
   int                   m_bimUnitSize;
-#else
-  bool                  m_bimEnabled;
-#endif
   bool                  m_dpfEnabled;
   int                   m_dpfKeyLen;
   int                   m_dpfNonkeyLen;

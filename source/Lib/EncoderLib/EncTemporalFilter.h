@@ -125,11 +125,7 @@ public:
             const std::map<int, double>& temporalFilterStrengths, const int pastRefs, const int futureRefs,
             const int firstValidFrame, const int lastValidFrame,
             const bool mctfEnabled, const int unitSize,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
             std::map<int, double*>* adaptQPmap, const bool bimEnabled, const int bimSize);
-#else
-            std::map<int, int*>* adaptQPmap, const bool bimEnabled, const int ctuSize);
-#endif
 
   bool filter(PelStorage *orgPic, int frame);
 
@@ -176,15 +172,9 @@ private:
   int  m_unitSize;
   InterpolationFilter m_if;
   bool m_bimEnabled;
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
   int m_numBimBlocks;
   int m_bimSize;
   std::map<int, double*>* m_ctuAdaptedQP;
-#else
-  int m_numCtu;
-  int m_ctuSize;
-  std::map<int, int*>* m_ctuAdaptedQP;
-#endif
 
   // Private functions
   void subsampleLuma(const PelStorage &input, PelStorage &output, const int factor = 2) const;

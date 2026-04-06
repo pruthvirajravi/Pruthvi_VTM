@@ -286,11 +286,7 @@ private:
 
 #if SHARP_LUMA_DELTA_QP || ENABLE_QPA_SUB_CTU
   void updateLambda(Slice* slice,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                     const double dQP,
-#else
-                    const int dQP,
-#endif
 #if WCG_EXT && ER_CHROMA_QP_WCG_PPS
                     const bool useWCGChromaControl,
 #endif

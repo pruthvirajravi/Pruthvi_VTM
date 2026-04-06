@@ -131,9 +131,7 @@ void EncModeCtrl::setBest( CodingStructure& cs )
 }
 
 void EncModeCtrl::xGetMinMaxQP(int& minQP, int& maxQP,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                double& deltaQPForLambda,
-#endif
                                const CodingStructure& cs,
                                const Partitioner& partitioner, const int baseQP, const SPS& sps, const PPS& pps,
                                const PartSplit splitMode)
@@ -165,7 +163,6 @@ void EncModeCtrl::xGetMinMaxQP(int& minQP, int& maxQP,
     maxQP               = Clip3(-sps.getQpBDOffset(ChannelType::LUMA), MAX_QP, baseQP + deltaQP);
     Position pos = partitioner.currQgPos;
     const int ctuSize = sps.getCTUSize();
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
     // BIM offset derived on CTU basis in full resolution
     // to get correct CTU in full resolution the position in the low resolution need to be scaled
     const auto maxWidthInLumaSamples = sps.getMaxPicWidthInLumaSamples();
@@ -234,12 +231,6 @@ void EncModeCtrl::xGetMinMaxQP(int& minQP, int& maxQP,
         deltaQPForLambda = avgBimOffset;
       }
     }
-#else
-    const int ctuId     = (pos.y / ctuSize) * ((cs.picture->lwidth() + ctuSize - 1) / ctuSize) + (pos.x / ctuSize);
-    const int bimOffset = getBIMOffset(m_slice->getPOC(), ctuId);
-    minQP += bimOffset;
-    maxQP += bimOffset;
-#endif
   }
   else if( qgEnableChildren ) // more splits and not the deepest QG level
   {
@@ -1315,12 +1306,8 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
   int minQP = baseQP;
   int maxQP = baseQP;
 
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
   double deltaQPForLambda = 0.0;
   xGetMinMaxQP(minQP, maxQP, deltaQPForLambda, cs, partitioner, baseQP, *cs.sps, *cs.pps, CU_QUAD_SPLIT);
-#else
-  xGetMinMaxQP( minQP, maxQP, cs, partitioner, baseQP, *cs.sps, *cs.pps, CU_QUAD_SPLIT );
-#endif
 
   bool checkIbc = true;
   if (partitioner.chType == ChannelType::CHROMA)
@@ -1352,30 +1339,20 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       for (int qp = maxQP; qp >= minQP; qp--)
       {
         m_ComprCUCtxList.back().testModes.push_back({ ETM_SPLIT_QT, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                       qp, deltaQPForLambda });
-#else
-                                                      qp });
-#endif
 
       }
     }
     m_ComprCUCtxList.back().testModes.push_back({ ETM_POST_DONT_SPLIT });
     xGetMinMaxQP(minQP, maxQP,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                  deltaQPForLambda,
-#endif
                  cs, partitioner, baseQP, *cs.sps, *cs.pps, CU_DONT_SPLIT);
     int  lowestQP = minQP;
     for (int qpLoop = maxQP; qpLoop >= minQP; qpLoop--)
     {
       const int qp = std::max(qpLoop, lowestQP);
       m_ComprCUCtxList.back().testModes.push_back({ ETM_INTER_ME, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                     qp, deltaQPForLambda });
-#else
-                                                    qp });
-#endif
     }
     if (!tryModeMaster(m_ComprCUCtxList.back().testModes.back(), cs, partitioner))
     {
@@ -1390,11 +1367,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     for( int qp = maxQP; qp >= minQP; qp-- )
     {
       m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_QT, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                     qp, deltaQPForLambda });
-#else
-                                                    qp });
-#endif
     }
   }
 
@@ -1404,11 +1377,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     for( int qp = maxQP; qp >= minQP; qp-- )
     {
       m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_TT_V, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                     qp, deltaQPForLambda });
-#else
-                                                    qp });
-#endif
 
     }
   }
@@ -1419,20 +1388,14 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     for( int qp = maxQP; qp >= minQP; qp-- )
     {
       m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_TT_H, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                     qp, deltaQPForLambda });
-#else
-                                                    qp });
-#endif
     }
   }
 
   int minQPq = minQP;
   int maxQPq = maxQP;
   xGetMinMaxQP(minQP, maxQP,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                deltaQPForLambda,
-#endif
                cs, partitioner, baseQP, *cs.sps, *cs.pps, CU_BT_SPLIT);
   if( partitioner.canSplit( CU_VERT_SPLIT, cs ) )
   {
@@ -1440,11 +1403,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     for( int qp = maxQP; qp >= minQP; qp-- )
     {
       m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_BT_V, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                     qp, deltaQPForLambda });
-#else
-                                                    qp });
-#endif
 
     }
     m_ComprCUCtxList.back().set( DID_VERT_SPLIT, true );
@@ -1460,11 +1419,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     for( int qp = maxQP; qp >= minQP; qp-- )
     {
       m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_BT_H, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                     qp, deltaQPForLambda });
-#else
-                                                    qp });
-#endif
     }
     m_ComprCUCtxList.back().set( DID_HORZ_SPLIT, true );
   }
@@ -1478,20 +1433,14 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     for( int qp = maxQPq; qp >= minQPq; qp-- )
     {
       m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_QT, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                     qp, deltaQPForLambda });
-#else
-                                                    qp });
-#endif
     }
   }
 
   m_ComprCUCtxList.back().testModes.push_back( { ETM_POST_DONT_SPLIT } );
 
   xGetMinMaxQP(minQP, maxQP,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                deltaQPForLambda,
-#endif
                cs, partitioner, baseQP, *cs.sps, *cs.pps, CU_DONT_SPLIT);
 
   int  lowestQP = minQP;
@@ -1520,11 +1469,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     if( isReusingCu )
     {
       m_ComprCUCtxList.back().testModes.push_back( {ETM_RECO_CACHED, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                     qp, deltaQPForLambda });
-#else
-                                                    qp });
-#endif
     }
 #endif
     // add intra modes
@@ -1536,46 +1481,26 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
           && getPltEnc())
       {
         m_ComprCUCtxList.back().testModes.push_back({ ETM_PALETTE, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                       qp, deltaQPForLambda });
-#else
-                                                      qp });
-#endif
       }
       m_ComprCUCtxList.back().testModes.push_back({ ETM_INTRA, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                     qp, deltaQPForLambda });
-#else
-                                                    qp });
-#endif
       if (cs.slice->getSPS()->getPLTMode() && partitioner.treeType == TREE_D && !cs.slice->isIntra()
           && !(cs.area.lwidth() == 4 && cs.area.lheight() == 4) && getPltEnc())
       {
         m_ComprCUCtxList.back().testModes.push_back({ ETM_PALETTE, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                       qp, deltaQPForLambda });
-#else
-                                                      qp });
-#endif
       }
     }
     // add ibc mode to intra path
     if (cs.sps->getIBCFlag() && checkIbc)
     {
       m_ComprCUCtxList.back().testModes.push_back({ ETM_IBC,         ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                     qp, deltaQPForLambda });
-#else
-                                                    qp });
-#endif
       if (isLuma(partitioner.chType))
       {
         m_ComprCUCtxList.back().testModes.push_back({ ETM_IBC_MERGE,   ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                       qp, deltaQPForLambda });
-#else
-                                                      qp });
-#endif
       }
     }
   }
@@ -1590,61 +1515,33 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       {
         m_ComprCUCtxList.back().testModes.push_back(
           { ETM_INTER_ME, EncTestModeOpts(int(EncTestMode::AmvrSearchMode::HALF_PEL) << ETO_IMV_SHIFT),
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
             qp, deltaQPForLambda });
-#else
-            qp });
-#endif
       }
       if( m_pcEncCfg->getIMV() || m_pcEncCfg->getUseAffineAmvr() )
       {
         const auto imv = m_pcEncCfg->getIMV4PelFast() ? EncTestMode::AmvrSearchMode::FOUR_PEL_FAST
                                                       : EncTestMode::AmvrSearchMode::FOUR_PEL;
         m_ComprCUCtxList.back().testModes.push_back({ ETM_INTER_ME, EncTestModeOpts(int(imv) << ETO_IMV_SHIFT),
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                       qp, deltaQPForLambda });
-#else
-                                                      qp });
-#endif
 
         m_ComprCUCtxList.back().testModes.push_back({ ETM_INTER_ME, EncTestModeOpts(int(EncTestMode::AmvrSearchMode::FULL_PEL) << ETO_IMV_SHIFT),
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
             qp, deltaQPForLambda });
-#else
-            qp });
-#endif
       }
       // add inter modes
       if( m_pcEncCfg->getUseEarlySkipDetection() )
       {
         m_ComprCUCtxList.back().testModes.push_back( { ETM_MERGE_SKIP,  ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                       qp, deltaQPForLambda });
-#else
-                                                      qp });
-#endif
         m_ComprCUCtxList.back().testModes.push_back({ ETM_INTER_ME, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                       qp, deltaQPForLambda });
-#else
-                                                      qp });
-#endif
 
       }
       else
       {
         m_ComprCUCtxList.back().testModes.push_back( { ETM_INTER_ME,    ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                       qp, deltaQPForLambda });
-#else
-                                                      qp });
-#endif
         m_ComprCUCtxList.back().testModes.push_back({ ETM_MERGE_SKIP, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                       qp, deltaQPForLambda });
-#else
-                                                      qp });
-#endif
       }
       if (getUseHashME())
       {
@@ -1652,11 +1549,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
         if (minSize < 128 && minSize >= 4)
         {
           m_ComprCUCtxList.back().testModes.push_back({ ETM_HASH_INTER, ETO_STANDARD,
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
                                                         qp, deltaQPForLambda });
-#else
-                                                        qp });
-#endif
         }
       }
     }

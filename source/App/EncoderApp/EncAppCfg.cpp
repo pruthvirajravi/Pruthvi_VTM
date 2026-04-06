@@ -1334,12 +1334,8 @@ bool EncAppCfg::parseCfg( int argc, char* argv[] )
   ("SmoothQPReductionModelScaleInter",                m_smoothQPReductionModelScaleInter,                 -1.0, "Scale parameter of the QP reduction model for inter pictures")
   ("SmoothQPReductionModelOffsetInter",               m_smoothQPReductionModelOffsetInter,                27.0, "Offset parameter of the QP reduction model for inter pictures")
   ("SmoothQPReductionLimitInter",                     m_smoothQPReductionLimitInter,                        -4, "Threshold parameter for controlling maximum amount of QP reduction by the QP reduction model for inter pictures")
-#if BIM_IMPROVEMENT_FROM_JVET_AN0267
   ("BIM",                                             m_bimEnabled,                                          0, "Block Importance Mapping QP adaptation depending on estimated propagation of reference samples. 0 = Off, 1 = On with QP and lambda adaptation, 2 = On with lambda adaptation only")
   ("BIMUnitSize",                                     m_bimUnitSize,                                        32, "Block size for derivation of BIM offsets (applied on CTU size)")
-#else
-  ("BIM",                                             m_bimEnabled,                                      false, "Block Importance Mapping QP adaptation depending on estimated propagation of reference samples.")
-#endif
   ("UseIdentityTableForNon420Chroma",                 m_useIdentityTableForNon420Chroma,                  true, "True: Indicates that 422/444 chroma uses identity chroma QP mapping tables; False: explicit Qp table may be specified in config")
   ("SameCQPTablesForAllChroma",                       m_chromaQpMappingTableParams.m_sameCQPTableForAllChromaFlag,                        true, "0: Different tables for Cb, Cr and joint Cb-Cr components, 1 (default): Same tables for all three chroma components")
   ("QpInValCb",                                       cfg_qpInValCb,                            cfg_qpInValCb, "Input coordinates for the QP table for Cb component")
