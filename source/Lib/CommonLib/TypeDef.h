@@ -55,7 +55,6 @@
 // clang-format off
 
 //########### place macros to be removed in next cycle below this line ###############
-#define JVET_AN0237_FILM_GRAIN_ANALYSIS                   1 // film grain analysis improvements
 #define JVET_AN0348                                       1
 
 #define TF_IMPROVEMENT_FROM_JVET_AN0267                   1

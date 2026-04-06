@@ -58,15 +58,8 @@ static constexpr int      MAXORDER                                  = 8;     // 
 static constexpr int      MAX_REAL_SCALE                            = 16;
 static constexpr int      ORDER                                     = 4;     // order of polinomial function
 static constexpr int      QUANT_LEVELS                              = 4;     // number of quantization levels in lloyd max quantization
-#if JVET_AN0237_FILM_GRAIN_ANALYSIS
 static constexpr int      INTERVAL_SIZE                             = 8;
-#else
-static constexpr int      INTERVAL_SIZE                             = 16;
-#endif
 static constexpr int      MIN_ELEMENT_NUMBER_PER_INTENSITY_INTERVAL = 8;
-#if !JVET_AN0237_FILM_GRAIN_ANALYSIS
-static constexpr int      MIN_POINTS_FOR_INTENSITY_ESTIMATION       = 40;    // 5*8 = 40; 5 intervals with at least 8 points
-#endif
 static constexpr int      MIN_BLOCKS_FOR_CUTOFF_ESTIMATION          = 2;     // 2 blocks of n x n size
 static constexpr int      POINT_STEP                                = 16;    // step size in point extension
 static constexpr int      MAX_NUM_POINT_TO_EXTEND                   = 4;     // max point in extension
@@ -88,7 +81,6 @@ static constexpr int      MAX_INTENSITY                             = 950;
 
 struct Picture;
 
-#if JVET_AN0237_FILM_GRAIN_ANALYSIS
 struct PairHash
 {
   size_t operator()(const std::pair<int, int>& p) const noexcept
@@ -106,12 +98,9 @@ struct Pairs
   int                 w = 0;  // weight
   std::vector<int>    idx;    // interval indices having this pair
 };
-#endif
 
 typedef std::vector<std::vector<Intermediate_Int>> PelMatrix;
-#if JVET_AN0237_FILM_GRAIN_ANALYSIS
 typedef std::vector<std::vector<uint64_t>>         PelMatrix64u;
-#endif
 typedef std::vector<std::vector<double>>           PelMatrixDouble;
 
 typedef std::vector<std::vector<long double>>      PelMatrixLongDouble;
@@ -211,9 +200,7 @@ private:
   // fg model parameters
   int                                    m_log2ScaleFactor;
   SEIFilmGrainCharacteristics::CompModel m_compModel[MAX_NUM_COMPONENT];
-#if JVET_AN0237_FILM_GRAIN_ANALYSIS
   int                                    m_cutoffPairs[MAX_NUM_COMPONENT]={0,0,0};
-#endif
 
   PelStorage *m_originalBuf = nullptr;
   PelStorage *m_workingBuf  = nullptr;
@@ -226,21 +213,13 @@ private:
   void findMask                     ();
 
   void estimate_grain_parameters    ();
-#if JVET_AN0237_FILM_GRAIN_ANALYSIS
   void block_transform              (const PelStorage& buff1, PelMatrix64u& squaredDctGrainBlock, int offsetX, int offsetY, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
   void estimate_cutoff_freq         (const std::vector<PelMatrix64u>& blocks, const std::vector<int>& numEl, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
-#else
-  void block_transform              (const PelStorage& buff1, std::vector<PelMatrix>& squaredDctGrainBlockList, int offsetX, int offsetY, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
-  void estimate_cutoff_freq         (const std::vector<PelMatrix>& blocks, const std::vector<int>& vec_mean, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
-#endif
   int  cutoff_frequency             (std::vector<double>& mean, unsigned int windowSize);
   void estimate_scaling_factors     (std::vector<int>& dataX, std::vector<int>& dataY, unsigned int bitDepth, ComponentID compID);
 
   bool fit_function                 (std::vector<int>& dataX, std::vector<int>& dataY, std::vector<double>& coeffs, std::vector<double>& scalingVec,
                                      int order, int bitDepth, bool secondPass, ComponentID compID);
- #if !JVET_AN0237_FILM_GRAIN_ANALYSIS
-  void avg_scaling_vec              (std::vector<double> &scalingVec, ComponentID compID, int bitDepth);
-#endif
   bool lloyd_max                    (std::vector<double>& scalingVec, std::vector<int>& quantizedVec, double& distortion, int numQuantizedLevels, int bitDepth);
   void quantize                     (std::vector<double>& scalingVec, std::vector<double>& quantizedVec, double& distortion, std::vector<double> partition, std::vector<double> codebook);
   void extend_points                (std::vector<int>& dataX, std::vector<int>& dataY, int bitDepth);
@@ -249,13 +228,11 @@ private:
   void define_intervals_and_scalings(std::vector<std::vector<int>>& parameters, std::vector<int>& quantizedVec, int bitDepth);
   void scale_down                   (std::vector<std::vector<int>>& parameters, int bitDepth);
   void confirm_intervals            (std::vector<std::vector<int>>& parameters);
-#if JVET_AN0237_FILM_GRAIN_ANALYSIS
   void merge_intervals_and_scalings (std::vector<std::vector<int>>& parameters, int bitDepth);
   void replace_cutoff               (ComponentID compID, int replacementH=8, int replacementV=8);
   void limit_cutoff                 (ComponentID compID, int replacementH=8, int replacementV=8);
   void limit_cutoff_consecutive     (ComponentID compID);
   int  limit_cutoff_pairs           (std::vector<Pairs>& pairs, int maxUnique=10);
-#endif
 
   long double ldpow                 (long double n, unsigned p);
   int         meanVar               (PelStorage& buffer, int windowSize, ComponentID compID, int offsetX, int offsetY, bool getVar);
