@@ -77,6 +77,10 @@ protected:
   std::string   m_colourRemapSEIFileName;             ///< output Colour Remapping file name
   std::string   m_SEICTIFileName;                     ///< output Recon with CTI file name
   std::string   m_SEIFGSFileName;                     ///< output file name for reconstructed sequence with film grain
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+  std::string   m_SEIGreenMetadataAttenuatedFileName; ///< output file name for reconstructed sequence with green metadata AMI (attenuation map information)
+  int           m_greenMetadataAMILayerId;            // layer identifier of the attenuation map to be applied
+#endif
   std::string   m_annotatedRegionsSEIFileName;        ///< annotated regions file name
   std::string   m_objectMaskInfoSEIFileName;          ///< object mask information file name
   std::vector<int> m_targetDecLayerIdSet;             ///< set of LayerIds to be included in the sub-bitstream extraction process.

@@ -512,6 +512,10 @@ DecLib::DecLib()
   , m_firstPictureInSequence(true)
   , m_grainCharacteristic()
   , m_grainBuf()
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+  , m_greenMetadataCharacteristic()
+  , m_attenuatedBuf()
+#endif
   , m_colourTranfParams()
   , m_firstSliceInBitstream(true)
   , m_isFirstAuInCvs(true)
@@ -2206,6 +2210,16 @@ void DecLib::xActivateParameterSets( const InputNALUnit nalu )
     m_pcPic->createGrainSynthesizer(m_firstPictureInSequence, &m_grainCharacteristic, &m_grainBuf,
                                     pps->getPicWidthInLumaSamples(), pps->getPicHeightInLumaSamples(),
                                     sps->getChromaFormatIdc(), sps->getBitDepth(ChannelType::LUMA));
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+    bool fullRangeFlag = false;
+    if (m_pcPic->cs->sps->getVuiParametersPresentFlag())
+    {
+      fullRangeFlag = m_pcPic->cs->sps->getVuiParameters()->getVideoFullRangeFlag();
+    }
+    m_pcPic->createGreenMetadataAMIProcessor(m_firstPictureInSequence, &m_greenMetadataCharacteristic, &m_attenuatedBuf,
+                                             pps->getPicWidthInLumaSamples(), pps->getPicHeightInLumaSamples(),
+                                             sps->getChromaFormatIdc(), sps->getBitDepth(ChannelType::LUMA), fullRangeFlag);
+#endif
     m_pcPic->createColourTransfProcessor(m_firstPictureInSequence, &m_colourTranfParams, &m_invColourTransfBuf,
                                          pps->getPicWidthInLumaSamples(), pps->getPicHeightInLumaSamples(),
                                          sps->getChromaFormatIdc(), sps->getBitDepth(ChannelType::LUMA));

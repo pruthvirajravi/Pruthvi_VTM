@@ -75,6 +75,10 @@ Picture::Picture()
   unscaledPic = nullptr;
   m_grainCharacteristic = nullptr;
   m_grainBuf            = nullptr;
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+  m_greenMetadataCharacteristic = nullptr;
+  m_attenuatedBuf = nullptr;
+#endif
 }
 
 void Picture::create(const bool useWrapAround, const ChromaFormat& _chromaFormat, const Size& size,
@@ -1568,6 +1572,48 @@ PelUnitBuf Picture::getDisplayBufFGUpscaled(const SPS& sps, const PPS& pps, int 
     return m_bufs[wrap ? PIC_RECON_WRAP : PIC_RECONSTRUCTION];
   }
 }
+
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+void Picture::createGreenMetadataAMIProcessor(bool firstPictureInSequence, SEIGreenMetadataApply *greenMetadataCharacteristics, PelStorage* attenuatedBuf, int width, int height, ChromaFormat fmt, int bitDepth, bool fullRangeFlag)
+{
+  m_greenMetadataCharacteristic = greenMetadataCharacteristics;
+  m_attenuatedBuf               = attenuatedBuf;
+
+  if (firstPictureInSequence)
+  {
+    // Create and initialize the Colour Transform Processor
+    m_greenMetadataCharacteristic->create(width, height, fmt, bitDepth, fullRangeFlag);
+
+    //Frame level PelStorage buffer created to apply the attenuation map information
+    m_attenuatedBuf->create(UnitArea(chromaFormat, Area(0, 0, width, height)));
+  }
+}
+
+PelUnitBuf Picture::getDisplayBufAttenuated(PelStorage* attenuationMap)
+{
+  SEI::PayloadType          payloadType;
+  std::list<SEI*>::iterator message;
+
+  for (message = SEIs.begin(); message != SEIs.end(); ++message)
+  {
+    payloadType = (*message)->payloadType();
+    if (payloadType == SEI::PayloadType::GREEN_METADATA)
+    {
+      *m_greenMetadataCharacteristic->m_pGreenMetadataInfo = *static_cast<SEIGreenMetadataInfo*>(*message);
+      break;
+    }
+  }
+
+  m_attenuatedBuf->copyFrom(getRecoBuf());
+
+  if (m_greenMetadataCharacteristic->m_pGreenMetadataInfo != nullptr)
+  {
+    m_greenMetadataCharacteristic->apply(attenuationMap, m_attenuatedBuf);
+  }
+
+  return *m_attenuatedBuf;
+}
+#endif
 
 void Picture::createColourTransfProcessor(bool firstPictureInSequence, SEIColourTransformApply* ctiCharacteristics, PelStorage* ctiBuf, int width, int height, ChromaFormat fmt, int bitDepth)
 {

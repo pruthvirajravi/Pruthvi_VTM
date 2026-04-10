@@ -3644,8 +3644,6 @@ bool EncAppCfg::parseCfg( int argc, char* argv[] )
         {
           CHECK(cfg_greenMetadataAMIPreprocessingFlag.values.size() != m_greenMetadataAMIMapNumber,
                 "Number of AMI preprocessing flags must be equal to AMI map number.");
-          CHECK(cfg_greenMetadataAMIPreprocessingTypeIdc.values.size() != m_greenMetadataAMIMapNumber,
-                "Number of AMI preprocessing types must be equal to AMI map number.");
           CHECK(cfg_greenMetadataAMIPreprocessingScaleIdc.values.size() != m_greenMetadataAMIMapNumber,
                 "Number of AMI preprocessing scales must be equal to AMI map number.");
         }
@@ -3663,8 +3661,6 @@ bool EncAppCfg::parseCfg( int argc, char* argv[] )
         {
           CHECK(cfg_greenMetadataAMIPreprocessingFlag.values.size() != 1,
                 "Number of AMI preprocessing flags must be equal to 1.");
-          CHECK(cfg_greenMetadataAMIPreprocessingTypeIdc.values.size() != 1,
-                "Number of AMI preprocessing types must be equal to 1.");
           CHECK(cfg_greenMetadataAMIPreprocessingScaleIdc.values.size() != 1,
                 "Number of AMI preprocessing scales must be equal to 1.");
         }
@@ -3731,8 +3727,9 @@ bool EncAppCfg::parseCfg( int argc, char* argv[] )
         m_greenMetadataAMIAttenuationCompIdc[i] = uint8_t(cfg_greenMetadataAMIAttenuationCompIdc.values[i]);
         if (m_greenMetadataAMIPreprocFlag)
         {
-          m_greenMetadataAMIPreprocessingFlag[i]     = uint8_t(cfg_greenMetadataAMIPreprocessingFlag.values[i]);
-          m_greenMetadataAMIPreprocessingTypeIdc[i]  = uint8_t(cfg_greenMetadataAMIPreprocessingTypeIdc.values[i]);
+          m_greenMetadataAMIPreprocessingFlag[i] = uint8_t(cfg_greenMetadataAMIPreprocessingFlag.values[i]);
+          if (m_greenMetadataAMIPreprocessingFlag[i])
+            m_greenMetadataAMIPreprocessingTypeIdc[i] = uint8_t(cfg_greenMetadataAMIPreprocessingTypeIdc.values[i]);
           m_greenMetadataAMIPreprocessingScaleIdc[i] = uint8_t(cfg_greenMetadataAMIPreprocessingScaleIdc.values[i]);
         }
         if (m_greenMetadataAMIBacklightFlag)

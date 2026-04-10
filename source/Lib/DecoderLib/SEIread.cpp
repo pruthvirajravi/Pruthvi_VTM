@@ -1273,8 +1273,6 @@ void SEIReader::xParseSEIGreenMetadataInfo(SEIGreenMetadataInfo& sei, uint32_t p
   output_sei_message_header(sei, pDecodedMessageOutputStream, payloadSize);
   sei_read_code(pDecodedMessageOutputStream, 8, code, "green_metadata_type");
   sei.m_greenMetadataType = code;
-  printf("GREEN MPEG Output: \n");
-  printf("Metadata Type: %i\n", sei.m_greenMetadataType);
 
   switch (sei.m_greenMetadataType)
   {
@@ -1411,10 +1409,9 @@ void SEIReader::xParseSEIGreenMetadataInfo(SEIGreenMetadataInfo& sei, uint32_t p
 #if GREEN_METADATA_SEI_ENABLED
 #if GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
   case 2:
-    sei_read_code(pDecodedMessageOutputStream, 8, code, "green_metadata_ami_flags");
-    CHECK(code > 63, "green_metadata_ami_flags shall be in the range 0-63");
+    sei_read_code(pDecodedMessageOutputStream, 8, code, "ami_flags");
+    CHECK(code > 63, "ami_flags shall be in the range 0-63");
     sei.m_greenMetadataAMIFlags = code;
-    printf("AMI FLAGS: %i\n", sei.m_greenMetadataAMIFlags);
 
     bool greenMetadataAMICancelFlag =
       ((sei.m_greenMetadataAMIFlags & GREEN_METADATA_AMI_FLAGS::CANCEL) == GREEN_METADATA_AMI_FLAGS::CANCEL) ? true
@@ -1438,22 +1435,19 @@ void SEIReader::xParseSEIGreenMetadataInfo(SEIGreenMetadataInfo& sei, uint32_t p
 
     if (!greenMetadataAMICancelFlag)
     {
-      sei_read_code(pDecodedMessageOutputStream, 4, code, "green_metadata_ami_display_model");
-      CHECK(code > 3, "green_metadata_ami_display_model shall be in the range 0-3");
+      sei_read_code(pDecodedMessageOutputStream, 4, code, "ami_display_model");
+      CHECK(code > 3, "ami_display_model shall be in the range 0-3");
       sei.m_greenMetadataAMIDisplayModel = code;
-      printf("AMI DISPLAY MODEL: %i\n", sei.m_greenMetadataAMIDisplayModel);
 
       if (greenMetadataAMIApproxFlag)
       {
-        sei_read_code(pDecodedMessageOutputStream, 4, code, "green_metadata_ami_approximation_model");
-        CHECK(code > 4, "green_metadata_ami_approximation_model shall be in the range 0-4");
+        sei_read_code(pDecodedMessageOutputStream, 4, code, "ami_approximation_model");
+        CHECK(code > 4, "ami_approximation_model shall be in the range 0-4");
         sei.m_greenMetadataAMIApproximationModel = code;
-        printf("AMI APPROXIMATION MODEL: %i\n", sei.m_greenMetadataAMIApproximationModel);
       }
-      sei_read_code(pDecodedMessageOutputStream, 3, code, "green_metadata_ami_map_number");
-      CHECK(code > 7, "green_metadata_ami_map_number shall be in the range 0-7");
+      sei_read_code(pDecodedMessageOutputStream, 3, code, "ami_map_number");
+      CHECK(code > 7, "ami_map_number shall be in the range 0-7");
       sei.m_greenMetadataAMIMapNumber = code;
-      printf("AMI MAP NUMBER: %i\n", sei.m_greenMetadataAMIMapNumber);
 
       int totalSize         = greenMetadataAMIGlobalFlag ? 1 : sei.m_greenMetadataAMIMapNumber;
       int energyQualitySize = sei.m_greenMetadataAMIMapNumber > 0 ? sei.m_greenMetadataAMIMapNumber : 1;
@@ -1484,110 +1478,91 @@ void SEIReader::xParseSEIGreenMetadataInfo(SEIGreenMetadataInfo& sei, uint32_t p
         sei.m_greenMetadataAMIVideoQualityLevel.resize(energyQualitySize);
       }
 
-      int index = 0;
       for (int i = 0; i < sei.m_greenMetadataAMIMapNumber; i++)
       {
-        sei_read_code(pDecodedMessageOutputStream, 8, code, "green_metadata_ami_layer_id[i]");
-        CHECK(code > 255, "green_metadata_ami_layer_id shall be in the range 0-255");
+        sei_read_code(pDecodedMessageOutputStream, 8, code, "ami_layer_id[i]");
+        CHECK(code > 255, "ami_layer_id shall be in the range 0-255");
         sei.m_greenMetadataAMILayerId[i] = code;
-        printf("AMI LAYER ID: %i\n", sei.m_greenMetadataAMILayerId[i]);
 
-        sei_read_code(pDecodedMessageOutputStream, 4, code, "green_metadata_ami_ols_number[i]");
-        CHECK(code > 15, "green_metadata_ami_ols_number shall be in the range 0-15");
+        sei_read_code(pDecodedMessageOutputStream, 4, code, "ami_ols_number[i]");
+        CHECK(code > 15, "ami_ols_number shall be in the range 0-15");
         sei.m_greenMetadataAMIOlsNumber[i] = code;
-        printf("AMI OLS NUMBER: %i\n", sei.m_greenMetadataAMIOlsNumber[i]);
 
         sei.m_greenMetadataAMIOlsId[i] = std::vector<uint8_t>();
         sei.m_greenMetadataAMIOlsId[i].resize(sei.m_greenMetadataAMIOlsNumber[i]);
         for (int j = 0; j < sei.m_greenMetadataAMIOlsNumber[i]; j++)
         {
-          sei_read_code(pDecodedMessageOutputStream, 8, code, "green_metadata_ami_ols_id[i][j]");
-          CHECK(code > 255, "green_metadata_ami_ols_id shall be in the range 0-255");
+          sei_read_code(pDecodedMessageOutputStream, 8, code, "ami_ols_id[i][j]");
+          CHECK(code > 255, "ami_ols_id shall be in the range 0-255");
           sei.m_greenMetadataAMIOlsId[i][j] = code;
-          printf("AMI OLS ID: %i\n", sei.m_greenMetadataAMIOlsId[i][j]);
         }
 
-        sei_read_code(pDecodedMessageOutputStream, 5, code, "green_metadata_ami_energy_reduction_rate[i]");
-        CHECK(code > 31, "green_metadata_ami_energy_reduction_rate shall be in the range 0-31");
+        sei_read_code(pDecodedMessageOutputStream, 5, code, "ami_energy_reduction_rate[i]");
+        CHECK(code > 31, "ami_energy_reduction_rate shall be in the range 0-31");
         sei.m_greenMetadataAMIEnergyReductionRate[i] = code;
-        printf("AMI ENERGY REDUCTION RATE: %i\n", sei.m_greenMetadataAMIEnergyReductionRate[i]);
 
         if (greenMetadataAMIQualityFlag)
         {
-          sei_read_code(pDecodedMessageOutputStream, 3, code, "green_metadata_ami_video_quality_metric_type[i]");
-          CHECK(code > 3, "green_metadata_ami_video_quality_metric_type shall be in the range 0-3");
+          sei_read_code(pDecodedMessageOutputStream, 3, code, "ami_video_quality_metric_type[i]");
+          CHECK(code > 3, "ami_video_quality_metric_type shall be in the range 0-3");
           sei.m_greenMetadataAMIVideoQualityMetricType[i] = code;
-          printf("AMI VIDEO QUALITY METRIC TYPE: %i\n", sei.m_greenMetadataAMIVideoQualityMetricType[i]);
 
-          sei_read_code(pDecodedMessageOutputStream, 16, code, "green_metadata_ami_video_quality_level[i]");
-          CHECK(code > 65535, "green_metadata_ami_video_quality_level shall be in the range 0-65535");
+          sei_read_code(pDecodedMessageOutputStream, 16, code, "ami_video_quality_level[i]");
+          CHECK(code > 65535, "ami_video_quality_level shall be in the range 0-65535");
           sei.m_greenMetadataAMIVideoQualityLevel[i] = code;
-          printf("AMI VIDEO QUALITY LEVEL: %i\n", sei.m_greenMetadataAMIVideoQualityLevel[i]);
         }
 
-        sei_read_code(pDecodedMessageOutputStream, 8, code, "green_metadata_ami_max_value[i]");
-        CHECK(code > 255, "green_metadata_ami_max_value shall be in the range 0-255");
+        sei_read_code(pDecodedMessageOutputStream, 8, code, "ami_max_value[i]");
+        CHECK(code > 255, "ami_max_value shall be in the range 0-255");
         sei.m_greenMetadataAMIMaxValue[i] = code;
-        printf("AMI MAX VALUE: %i\n", sei.m_greenMetadataAMIMaxValue[i]);
 
         if ((!greenMetadataAMIGlobalFlag) || (i == 0))
         {
-          sei_read_code(pDecodedMessageOutputStream, 4, code, "green_metadata_ami_attenuation_use_idc[i]");
-          CHECK(code > 2, "green_metadata_ami_attenuation_use_idc shall be in the range 0-2");
+          sei_read_code(pDecodedMessageOutputStream, 4, code, "ami_attenuation_use_idc[i]");
+          CHECK(code > 2, "ami_attenuation_use_idc shall be in the range 0-2");
           sei.m_greenMetadataAMIAttenuationUseIdc[i] = code;
-          printf("AMI ATTENUATION USE IDC: %i\n", sei.m_greenMetadataAMIAttenuationUseIdc[i]);
 
-          sei_read_code(pDecodedMessageOutputStream, 4, code, "green_metadata_ami_attenuation_comp_idc[i]");
-          CHECK(code > 6, "green_metadata_ami_attenuation_comp_idc shall be in the range 0-6");
+          sei_read_code(pDecodedMessageOutputStream, 4, code, "ami_attenuation_comp_idc[i]");
+          CHECK(code > 6, "ami_attenuation_comp_idc shall be in the range 0-6");
           sei.m_greenMetadataAMIAttenuationCompIdc[i] = code;
-          printf("AMI ATTENUATION COMP IDC: %i\n", sei.m_greenMetadataAMIAttenuationCompIdc[i]);
 
           if (greenMetadataAMIPreprocFlag)
           {
-            sei_read_flag(pDecodedMessageOutputStream, code, "green_metadata_ami_preprocessing_flag[i]");
-            // CHECK( std::is_same_v< decltype((code)), bool > == true, "green_metadata_ami_preprocessing_flag shall be
-            // a boolean"); // CHD
+            sei_read_flag(pDecodedMessageOutputStream, code, "ami_preprocessing_flag[i]");
             sei.m_greenMetadataAMIPreprocessingFlag[i] = code;
-            printf("AMI PREPROCESSING FLAG: %i\n", int(sei.m_greenMetadataAMIPreprocessingFlag[i]));
 
             if (sei.m_greenMetadataAMIPreprocessingFlag[i])
             {
-              sei_read_code(pDecodedMessageOutputStream, 2, code, "green_metadata_ami_preprocessing_type_idc[i]");
-              CHECK(code > 3, "green_metadata_ami_preprocessing_type shall be in the range 0-3");
+              sei_read_code(pDecodedMessageOutputStream, 2, code, "ami_preprocessing_type_idc[i]");
+              CHECK(code > 3, "ami_preprocessing_type shall be in the range 0-3");
               sei.m_greenMetadataAMIPreprocessingTypeIdc[i] = code;
-              printf("AMI PREPROCESSING TYPE IDC: %i\n", sei.m_greenMetadataAMIPreprocessingTypeIdc[i]);
             }
-            sei_read_code(pDecodedMessageOutputStream, 4, code, "green_metadata_ami_preprocessing_scale_idc[i]");
-            CHECK(code > 2, "green_metadata_ami_preprocessing_scale_idc shall be in the range 0-2");
+            sei_read_code(pDecodedMessageOutputStream, 4, code, "ami_preprocessing_scale_idc[i]");
+            CHECK(code > 2, "ami_preprocessing_scale_idc shall be in the range 0-2");
             sei.m_greenMetadataAMIPreprocessingScaleIdc[i] = code;
-            printf("AMI PREPROCESSING SCALE IDC: %i\n", sei.m_greenMetadataAMIPreprocessingScaleIdc[i]);
           }
           if (greenMetadataAMIBacklightFlag)
           {
-            sei_read_code(pDecodedMessageOutputStream, 4, code, "green_metadata_ami_backlight_scaling_idc[i]");
-            CHECK(code > 1, "green_metadata_ami_backlight_scaling_idc shall be in the range 0-1");
+            sei_read_code(pDecodedMessageOutputStream, 4, code, "ami_backlight_scaling_idc[i]");
+            CHECK(code > 1, "ami_backlight_scaling_idc shall be in the range 0-1");
             sei.m_greenMetadataAMIBacklightScalingIdc[i] = code;
-            printf("AMI BACKLIGHT SCALING IDC: %i\n", sei.m_greenMetadataAMIBacklightScalingIdc[i]);
           }
         }
       }
       if (sei.m_greenMetadataAMIMapNumber == 0)
       {
-        sei_read_code(pDecodedMessageOutputStream, 5, code, "green_metadata_ami_energy_reduction_rate[0]");
-        CHECK(code > 31, "green_metadata_ami_energy_reduction_rate shall be in the range 0-31");
+        sei_read_code(pDecodedMessageOutputStream, 5, code, "ami_energy_reduction_rate[0]");
+        CHECK(code > 31, "ami_energy_reduction_rate shall be in the range 0-31");
         sei.m_greenMetadataAMIEnergyReductionRate[0] = code;
-        printf("AMI ENERGY REDUCTION RATE 0: %i\n", sei.m_greenMetadataAMIEnergyReductionRate[0]);
         if (greenMetadataAMIQualityFlag)
         {
-          sei_read_code(pDecodedMessageOutputStream, 3, code, "green_metadata_ami_video_quality_metric_type[0]");
-          CHECK(code > 3, "green_metadata_ami_video_quality_metric_type shall be in the range 0-3");
+          sei_read_code(pDecodedMessageOutputStream, 3, code, "ami_video_quality_metric_type[0]");
+          CHECK(code > 3, "ami_video_quality_metric_type shall be in the range 0-3");
           sei.m_greenMetadataAMIVideoQualityMetricType[0] = code;
-          printf("AMI VIDEO QUALITY METRIC TYPE 0: %i\n", sei.m_greenMetadataAMIVideoQualityMetricType[0]);
 
-          sei_read_code(pDecodedMessageOutputStream, 16, code, "green_metadata_ami_video_quality_level[0]");
-          CHECK(code > 65535, "green_metadata_ami_video_quality_level shall be in the range 0-65535");
+          sei_read_code(pDecodedMessageOutputStream, 16, code, "ami_video_quality_level[0]");
+          CHECK(code > 65535, "ami_video_quality_level shall be in the range 0-65535");
           sei.m_greenMetadataAMIVideoQualityLevel[0] = code;
-          printf("AMI VIDEO QUALITY LEVEL 0: %i\n", sei.m_greenMetadataAMIVideoQualityLevel[0]);
         }
       }
     }

@@ -153,6 +153,10 @@ private:
   bool                    m_firstPictureInSequence;
   SEIFilmGrainSynthesizer m_grainCharacteristic;
   PelStorage              m_grainBuf;
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+  SEIGreenMetadataApply   m_greenMetadataCharacteristic;
+  PelStorage              m_attenuatedBuf;
+#endif
   SEIColourTransformApply m_colourTranfParams;
   PelStorage              m_invColourTransfBuf;
   bool                    m_firstSliceInSequence[MAX_VPS_LAYERS];

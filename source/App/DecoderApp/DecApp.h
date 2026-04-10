@@ -64,6 +64,11 @@ private:
   std::unordered_map<int, VideoIOYuv>      m_videoIOYuvSEIFGSFile;       ///< reconstruction YUV with FGS class
   std::unordered_map<int, VideoIOYuv>      m_cVideoIOYuvSEICTIFile;       ///< reconstruction YUV with CTI class
 
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+  VideoIOYuv                               m_cVideoIOYuvSEIGreenMetadataAttenuatedFile; ///< reconstruction YUV with GreenMetadata class
+  PelStorage                               m_attenuationMap;
+#endif
+
   bool                                    m_ShutterFilterEnable;          ///< enable Post-processing with Shutter Interval SEI
   VideoIOYuv                              m_cTVideoIOYuvSIIPostFile;      ///< post-filtered YUV class
   int                                     m_SII_BlendingRatio;
