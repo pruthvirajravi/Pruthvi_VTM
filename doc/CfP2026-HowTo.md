@@ -6,8 +6,8 @@ the 2026 Call for Proposals on Video Compression with Capability beyond VVC.
 
 VTM version 24.x shall be used.
 
-Quantization settings to achieve target bit rates will be provided by June
-2026.
+Quantization settings to achieve target bit rates will be provided at a later
+date (see JVET-AP2026).
 
 ## VTM anchors
 
