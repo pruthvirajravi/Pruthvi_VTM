@@ -4,7 +4,7 @@ This documents describes the command-line parameters to be provided to the VTM
 encoder to produce the VTM anchors and additional VTM references to be used in
 the 2026 Call for Proposals on Video Compression with Capability beyond VVC.
 
-VTM version 24.x shall be used.
+VTM version 24.0 shall be used, which can be found in the `cfp-2026` branch.
 
 Quantization settings to achieve target bit rates will be provided at a later
 date (see JVET-AP2026).
