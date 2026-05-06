@@ -82,36 +82,36 @@ build_macos_arm:
 
 build_ubuntu2204:
    extends: .build_template_linux
-   image: registry.vcgit.hhi.fraunhofer.de/pub/dockerimages/ubuntu_2204_full:latest 
+   image: harbor.fe.hhi.de/vigitlab/pub/dockerimages/ubuntu_2204_full:latest 
    tags:
       - docker
 
 build_ubuntu2404:
    extends: .build_template_linux
-   image: registry.vcgit.hhi.fraunhofer.de/pub/dockerimages/ubuntu_2404_full:latest 
+   image: harbor.fe.hhi.de/vigitlab/pub/dockerimages/ubuntu_2404_full:latest 
    tags:
       - docker
 
 build_ubuntu2404_highbit:
    extends: .build_template_linux_highbit
-   image: registry.vcgit.hhi.fraunhofer.de/pub/dockerimages/ubuntu_2404_full:latest 
+   image: harbor.fe.hhi.de/vigitlab/pub/dockerimages/ubuntu_2404_full:latest 
    tags:
       - docker
 
 build_ubuntu2404_trace_enable:
    extends: .build_template_linux_trace_enable
-   image: registry.vcgit.hhi.fraunhofer.de/pub/dockerimages/ubuntu_2404_full:latest 
+   image: harbor.fe.hhi.de/vigitlab/pub/dockerimages/ubuntu_2404_full:latest 
    tags:
       - docker
 build_ubuntu2404_no_openssl:
    extends: .build_template_linux_no_openssl
-   image: registry.vcgit.hhi.fraunhofer.de/pub/dockerimages/ubuntu_2404_full:latest 
+   image: harbor.fe.hhi.de/vigitlab/pub/dockerimages/ubuntu_2404_full:latest 
    tags:
       - docker
 
 build_ubuntu2404-gcc14:
    extends: .build_template_linux
-   image: registry.vcgit.hhi.fraunhofer.de/pub/dockerimages/ubuntu_2404_full:latest 
+   image: harbor.fe.hhi.de/vigitlab/pub/dockerimages/ubuntu_2404_full:latest 
    variables:
       CC: gcc-14
       CXX: g++-14
@@ -134,7 +134,7 @@ build_vc193x:
 
 build_software-manual:
    extends: .build_template
-   image: registry.vcgit.hhi.fraunhofer.de/pub/dockerimages/ubuntu_2404_full:latest 
+   image: harbor.fe.hhi.de/vigitlab/pub/dockerimages/ubuntu_2404_full:latest 
    script:
       - cd doc
       - make clean
