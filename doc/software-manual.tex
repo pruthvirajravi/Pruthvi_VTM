@@ -2422,6 +2422,24 @@ Specifies a frame number in the input video file. If this value is defined, the 
 Specifies a QP offset from the base QP value to be used for intra frames.
 \\
 
+\Option{InterQPOffsetFrame*} &
+%\ShortOption{\None} &
+\Default{0} &
+To mimic QP for a longer GOP structure. Specifies that every *:th frame will have a specific QP offset from the base QP value (similar to GOP structure parameter QPOffset), where * can be  16 or 32. E.g --InterQPOffsetFrame32 1 will add 1 to the baseQP for every 32:th picture, unless its an intra picture. Only applicable for inter frames where GOPSize < *.
+\\
+
+\Option{InterQPOffsetModelOffsetFrame*} &
+%\ShortOption{\None} &
+\Default{0.0} &
+To mimic QP for a longer GOP hierarchy. Specifies that every *:th frame will have specific QP offset model offset (similar to GOP structure parameter QPOffsetModelOff), where * can be 16 or 32. E.g --InterQPOffsetModelOffsetFrame32 1.0 will set the QP offset model offset to 1.0 for every 32:th picture, unless its an intra picture. Only applicable for inter frames where GOPSize < *.
+\\
+
+\Option{InterQPOffsetModelScaleFrame*} &
+%\ShortOption{\None} &
+\Default{0.0} &
+To mimic QP for a longer GOP hierarchy. Specifies that every *:th frame will have specific QP offset model scale (similar to GOP structure parameter QPOffsetModelScale), where * can be 16 or 32. E.g --InterQPOffsetModelScaleFrame32 1.0 will set the QP offset model scale to 1.0 for every 32:th picture, unless its an intra picture. Only applicable for inter frames where GOPSize < *.
+\\
+
 \Option{DepQuant} &
 %\ShortOption{\None} &
 \Default{true} &
