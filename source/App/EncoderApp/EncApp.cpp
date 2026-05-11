@@ -619,6 +619,11 @@ void EncApp::xInitLibCfg( int layerIdx )
   m_cEncLib.setQpRefAdj(m_qpRefAdj);
 
   m_cEncLib.setIntraQPOffset                                     ( m_intraQPOffset );
+#if JVET_AP0070
+  m_cEncLib.setInterQPOffsetFrame                                (m_interQPOffsetFrame);
+  m_cEncLib.setInterQPOffsetModelOffsetFrame                     (m_interQPOffsetModelOffsetFrame);
+  m_cEncLib.setInterQPOffsetModelScaleFrame                      (m_interQPOffsetModelScaleFrame);
+#endif
   m_cEncLib.setLambdaFromQPEnable                                ( m_lambdaFromQPEnable );
   m_cEncLib.setChromaQpMappingTableParams                        (m_chromaQpMappingTableParams);
 

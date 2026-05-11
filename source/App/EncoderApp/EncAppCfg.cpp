@@ -1305,6 +1305,14 @@ bool EncAppCfg::parseCfg( int argc, char* argv[] )
   ("PPSInitialQPOffset",                              m_qpRefAdj,                                           0, "Offset added to initial QP value coded in PPS")
   ("QPIncrementFrame,-qpif",                          m_qpIncrementAtSourceFrame,   std::optional<uint32_t>(), "If a source file frame number is specified, the internal QP will be incremented for all POCs associated with source frames >= frame number. If empty, do not increment.")
   ("IntraQPOffset",                                   m_intraQPOffset,                                      0, "Qp offset value for intra slice, typically determined based on GOP size")
+#if JVET_AP0070
+  ("InterQPOffsetFrame*", m_interQPOffsetFrame, std::map<int, int>(), "Qp offset value for every * frame, where * is an integer."
+    " E.g. --InterQPOffsetFrame16 1 will set the Qp offset to 1 at every 16th frame")
+  ("InterQPOffsetModelOffsetFrame*", m_interQPOffsetModelOffsetFrame, std::map<int, double>(), "Qp offset value for every * frame, where * is an integer."
+      " E.g. --InterQPOffsetModelOffsetFrame16 1.0 will set the Qp offset to 1 at every 16th frame")
+  ("InterQPOffsetModelScaleFrame*", m_interQPOffsetModelScaleFrame, std::map<int, double>(), "Qp offset value for every * frame, where * is an integer."
+      " E.g. --InterQPOffsetModelScaleFrame16 1.0 will set the Qp offset to 1 at every 16th frame")
+#endif
   ("LambdaFromQpEnable",                              m_lambdaFromQPEnable,                             false, "Enable flag for derivation of lambda from QP")
   ("DeltaQpRD,-dqr",                                  m_uiDeltaQpRD,                                       0u, "max dQp offset for slice")
   ("MaxDeltaQP,d",                                    m_iMaxDeltaQP,                                        0, "max dQp offset for block")

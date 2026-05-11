@@ -56,7 +56,7 @@
 
 //########### place macros to be removed in next cycle below this line ###############
 
-
+#define JVET_AP0070   1
 //########### place macros to be be kept below this line ###############
 
 #ifndef JVET_AJ0151_DSC_SEI

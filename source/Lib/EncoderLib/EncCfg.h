@@ -295,6 +295,11 @@ protected:
 
   ChromaQpMappingTableParams m_chromaQpMappingTableParams;
   int       m_intraQPOffset;                    ///< QP offset for intra slice (integer)
+#if JVET_AP0070
+  std::map<int, int> m_interQPOffsetFrame;
+  std::map<int, double> m_interQPOffsetModelOffsetFrame;
+  std::map<int, double> m_interQPOffsetModelScaleFrame;
+#endif
   int       m_lambdaFromQPEnable;               ///< enable lambda derivation from QP
   double    m_lambdaScaleTowardsNextQP;         ///< scale lambda towards lambda of next QP
   bool      m_AccessUnitDelimiter;               ///< add Access Unit Delimiter NAL units
@@ -1540,6 +1545,11 @@ public:
   void      setBaseQP                       ( int   i )      { m_iQP = i; }
   void      setQpRefAdj(int deltaQp) { m_qpRefAdj = deltaQp; }
   void      setIntraQPOffset                ( int   i )         { m_intraQPOffset = i; }
+#if JVET_AP0070
+  void      setInterQPOffsetFrame           (std::map<int, int> interQPOffsetFrame) { m_interQPOffsetFrame = interQPOffsetFrame; }
+  void      setInterQPOffsetModelOffsetFrame(std::map<int, double> interQPOffsetModelOffsetFrame) { m_interQPOffsetModelOffsetFrame = interQPOffsetModelOffsetFrame; }
+  void      setInterQPOffsetModelScaleFrame(std::map<int, double> interQPOffsetModelScaleFrame) { m_interQPOffsetModelScaleFrame = interQPOffsetModelScaleFrame; }
+#endif
   void      setLambdaFromQPEnable           ( bool  b )         { m_lambdaFromQPEnable = b; }
   void      setChromaQpMappingTableParams   (const ChromaQpMappingTableParams &params) { m_chromaQpMappingTableParams = params; }
 
