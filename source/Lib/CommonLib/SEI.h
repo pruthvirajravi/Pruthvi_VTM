@@ -54,39 +54,38 @@ class SEI
 public:
   enum class PayloadType : uint16_t
   {
-    BUFFERING_PERIOD                     = 0,
-    PICTURE_TIMING                       = 1,
-    FILLER_PAYLOAD                       = 3,
-    USER_DATA_REGISTERED_ITU_T_T35       = 4,
-    USER_DATA_UNREGISTERED               = 5,
-    FILM_GRAIN_CHARACTERISTICS           = 19,
-    POST_FILTER_HINT = 22,
-    FRAME_PACKING                        = 45,
-    DISPLAY_ORIENTATION                  = 47,
-    GREEN_METADATA                       = 56,
-    PARAMETER_SETS_INCLUSION_INDICATION  = 129,
-    DECODING_UNIT_INFO                   = 130,
-    DECODED_PICTURE_HASH                 = 132,
-    SCALABLE_NESTING                     = 133,
-    MASTERING_DISPLAY_COLOUR_VOLUME      = 137,
-    COLOUR_TRANSFORM_INFO                = 142,
-    CONTENT_LIGHT_LEVEL_INFO             = 144,
-    DEPENDENT_RAP_INDICATION             = 145,
-    ALTERNATIVE_TRANSFER_CHARACTERISTICS = 147,
-    AMBIENT_VIEWING_ENVIRONMENT          = 148,
-    CONTENT_COLOUR_VOLUME                = 149,
-    EQUIRECTANGULAR_PROJECTION           = 150,
-    GENERALIZED_CUBEMAP_PROJECTION       = 153,
-    SPHERE_ROTATION                      = 154,
-    REGION_WISE_PACKING                  = 155,
-    OMNI_VIEWPORT                        = 156,
-    ALPHA_CHANNEL_INFO                   = 165,
-    FRAME_FIELD_INFO                     = 168,
-    DEPTH_REPRESENTATION_INFO            = 177,
-    MULTIVIEW_ACQUISITION_INFO           = 179,
-    MULTIVIEW_VIEW_POSITION              = 180,
-    SEI_MANIFEST = 200,
-    SEI_PREFIX_INDICATION = 201,
+    BUFFERING_PERIOD                           = 0,
+    PICTURE_TIMING                             = 1,
+    FILLER_PAYLOAD                             = 3,
+    USER_DATA_REGISTERED_ITU_T_T35             = 4,
+    USER_DATA_UNREGISTERED                     = 5,
+    FILM_GRAIN_CHARACTERISTICS                 = 19,
+    FRAME_PACKING                              = 45,
+    DISPLAY_ORIENTATION                        = 47,
+    GREEN_METADATA                             = 56,
+    PARAMETER_SETS_INCLUSION_INDICATION        = 129,
+    DECODING_UNIT_INFO                         = 130,
+    DECODED_PICTURE_HASH                       = 132,
+    SCALABLE_NESTING                           = 133,
+    MASTERING_DISPLAY_COLOUR_VOLUME            = 137,
+    COLOUR_TRANSFORM_INFO                      = 142,
+    CONTENT_LIGHT_LEVEL_INFO                   = 144,
+    DEPENDENT_RAP_INDICATION                   = 145,
+    ALTERNATIVE_TRANSFER_CHARACTERISTICS       = 147,
+    AMBIENT_VIEWING_ENVIRONMENT                = 148,
+    CONTENT_COLOUR_VOLUME                      = 149,
+    EQUIRECTANGULAR_PROJECTION                 = 150,
+    GENERALIZED_CUBEMAP_PROJECTION             = 153,
+    SPHERE_ROTATION                            = 154,
+    REGION_WISE_PACKING                        = 155,
+    OMNI_VIEWPORT                              = 156,
+    ALPHA_CHANNEL_INFO                         = 165,
+    FRAME_FIELD_INFO                           = 168,
+    DEPTH_REPRESENTATION_INFO                  = 177,
+    MULTIVIEW_ACQUISITION_INFO                 = 179,
+    MULTIVIEW_VIEW_POSITION                    = 180,
+    SEI_MANIFEST                               = 200,
+    SEI_PREFIX_INDICATION                      = 201,
     ANNOTATED_REGIONS                          = 202,
     SUBPICTURE_LEVEL_INFO                      = 203,
     SAMPLE_ASPECT_RATIO_INFO                   = 204,
@@ -98,22 +97,21 @@ public:
     NEURAL_NETWORK_POST_FILTER_CHARACTERISTICS = 210,
     NEURAL_NETWORK_POST_FILTER_ACTIVATION      = 211,
     PHASE_INDICATION                           = 212,
-
-    SEI_PROCESSING_ORDER = 213,
-    SEI_PROCESSING_ORDER_NESTING = 214,
-    ENCODER_OPTIMIZATION_INFO = 215,
-    SOURCE_PICTURE_TIMING_INFO = 216,
-    OBJECT_MASK_INFO = 217,
-    MODALITY_INFORMATION = 218,
-    TEXT_DESCRIPTION                        = 219,
-    DIGITALLY_SIGNED_CONTENT_INITIALIZATION = 220,
-    DIGITALLY_SIGNED_CONTENT_SELECTION      = 221,
-    DIGITALLY_SIGNED_CONTENT_VERIFICATION   = 222,
-    GENERATIVE_FACE_VIDEO                   = 223,
-    GENERATIVE_FACE_VIDEO_ENHANCEMENT       = 224,
-    AI_USAGE_RESTRICTIONS                   = 225,   
-    PACKED_REGIONS_INFO                     = 226,
-    IMAGE_FORMAT_METADATA                   = 227,
+    SEI_PROCESSING_ORDER                       = 213,
+    SEI_PROCESSING_ORDER_NESTING               = 214,
+    ENCODER_OPTIMIZATION_INFO                  = 215,
+    SOURCE_PICTURE_TIMING_INFO                 = 216,
+    OBJECT_MASK_INFO                           = 217,
+    MODALITY_INFORMATION                       = 218,
+    TEXT_DESCRIPTION                           = 219,
+    DIGITALLY_SIGNED_CONTENT_INITIALIZATION    = 220,
+    DIGITALLY_SIGNED_CONTENT_SELECTION         = 221,
+    DIGITALLY_SIGNED_CONTENT_VERIFICATION      = 222,
+    GENERATIVE_FACE_VIDEO                      = 223,
+    GENERATIVE_FACE_VIDEO_ENHANCEMENT          = 224,
+    AI_USAGE_RESTRICTIONS                      = 225,
+    PACKED_REGIONS_INFO                        = 226,
+    IMAGE_FORMAT_METADATA                      = 227,
   };
 
   SEI() {}
@@ -1634,24 +1632,6 @@ public:
   uint32_t       m_seed;
   bool           m_selectedInputFlag;
   uint32_t       m_numInputPicShift;
-};
-
-class SEIPostFilterHint : public SEI
-{
-public:
-  PayloadType payloadType() const { return PayloadType::POST_FILTER_HINT; }
-
-  SEIPostFilterHint() {}
-  SEIPostFilterHint(const SEIPostFilterHint& sei);
-  virtual ~SEIPostFilterHint() {}
-
-  bool             m_filterHintCancelFlag;
-  bool             m_filterHintPersistenceFlag;
-  uint32_t         m_filterHintSizeY;
-  uint32_t         m_filterHintSizeX;
-  uint32_t         m_filterHintType;
-  bool             m_filterHintChromaCoeffPresentFlag;
-  std::vector<int> m_filterHintValues;   // values stored in linear array, [ ( ( component * sizeY + y ) * SizeX ) + x ]
 };
 
 class SEITextDescription : public SEI

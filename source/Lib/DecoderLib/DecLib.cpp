@@ -1506,9 +1506,6 @@ void DecLib::checkSeiInPictureUnit()
 {
   std::vector<std::pair<SEI::PayloadType, std::vector<uint8_t>>> seiList;
 
-  bool prefixPostfilterHintSEI = false;
-  bool suffixPostfilterHintSEI = false;
-
   // payload types subject to constrained SEI repetition
   const std::set<SEI::PayloadType> picUnitRepConSeiList = {
     SEI::PayloadType::BUFFERING_PERIOD,                             // 0,
@@ -1585,17 +1582,6 @@ void DecLib::checkSeiInPictureUnit()
       }
       seiList.push_back(data);
 
-      if (data.first == SEI::PayloadType::POST_FILTER_HINT)
-      {
-        if (sei->m_nalUnitType == NalUnitType::NAL_UNIT_PREFIX_SEI)
-        {
-          prefixPostfilterHintSEI = true;
-        }
-        else if (sei->m_nalUnitType == NalUnitType::NAL_UNIT_SUFFIX_SEI)
-        {
-          suffixPostfilterHintSEI = true;
-        }
-      }
     } while (bs.getNumBitsLeft() > 8);
   }
 
@@ -1626,10 +1612,6 @@ void DecLib::checkSeiInPictureUnit()
             "There shall be less than or equal to 4 identical sei_payload( ) syntax structures within a picture unit.");
     }
   }
-
-  CHECK(prefixPostfilterHintSEI && suffixPostfilterHintSEI,
-        "Post-filter hint SEI message shall not be present in both a prefix SEI NALU and a suffix SEI NALU in the same "
-        "picture unit")
 }
 
 /**

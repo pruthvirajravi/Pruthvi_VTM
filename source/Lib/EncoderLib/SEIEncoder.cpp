@@ -851,27 +851,6 @@ void SEIEncoder::initSEIProcessingOrderInfo(SEIProcessingOrderInfo *seiProcessin
   seiProcessingOrderNesting->m_ponNumSeisMinus1 = ponNumSeis - 1;
 }
 
-void SEIEncoder::initSEIPostFilterHint(SEIPostFilterHint *seiPostFilterHint)
-{
-  CHECK(!m_isInitialized, "The post-filter hint SEI message needs to be initialized");
-  CHECK(seiPostFilterHint == nullptr, "Failed to get the handler to the SEI message");
-
-  seiPostFilterHint->m_filterHintCancelFlag             = m_pcCfg->getPostFilterHintSEICancelFlag();
-  seiPostFilterHint->m_filterHintPersistenceFlag        = m_pcCfg->getPostFilterHintSEIPersistenceFlag();
-  seiPostFilterHint->m_filterHintSizeY                  = m_pcCfg->getPostFilterHintSEISizeY();
-  seiPostFilterHint->m_filterHintSizeX                  = m_pcCfg->getPostFilterHintSEISizeX();
-  seiPostFilterHint->m_filterHintType                   = m_pcCfg->getPostFilterHintSEIType();
-  seiPostFilterHint->m_filterHintChromaCoeffPresentFlag = m_pcCfg->getPostFilterHintSEIChromaCoeffPresentFlag();
-
-  seiPostFilterHint->m_filterHintValues.resize((seiPostFilterHint->m_filterHintChromaCoeffPresentFlag ? 3 : 1)
-                                               * seiPostFilterHint->m_filterHintSizeY
-                                               * seiPostFilterHint->m_filterHintSizeX);
-  for (uint32_t i = 0; i < seiPostFilterHint->m_filterHintValues.size(); i++)
-  {
-    seiPostFilterHint->m_filterHintValues[i] = m_pcCfg->getPostFilterHintSEIValues(i);
-  }
-}
-
 void SEIEncoder::initSEITextDescription(SEITextDescription *seiTestDescrition)
 {
   CHECK(!(m_isInitialized), "Text description information SEI already initialized");
