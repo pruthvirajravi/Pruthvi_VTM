@@ -1563,15 +1563,6 @@ void EncApp::xInitLibCfg( int layerIdx )
     m_cEncLib.setIfmDataPayloadByte                             ( i, m_ifmDataPayloadByte[i] );
     m_cEncLib.setIfmDataUri                                     ( i, m_ifmDataUri[i] );
   }
-  m_cEncLib.setPostFilterHintSEIEnabled(m_postFilterHintSEIEnabled);
-  m_cEncLib.setPostFilterHintSEICancelFlag(m_postFilterHintSEICancelFlag);
-  m_cEncLib.setPostFilterHintSEIPersistenceFlag(m_postFilterHintSEIPersistenceFlag);
-  m_cEncLib.setPostFilterHintSEISizeY(m_postFilterHintSEISizeY);
-  m_cEncLib.setPostFilterHintSEISizeX(m_postFilterHintSEISizeX);
-  m_cEncLib.setPostFilterHintSEIType(m_postFilterHintSEIType);
-  m_cEncLib.setPostFilterHintSEIChromaCoeffPresentFlag(m_postFilterHintSEIChromaCoeffPresentFlag);
-  m_cEncLib.setPostFilterHintSEIValues(m_postFilterHintValues);
-
   m_cEncLib.setVuiParametersPresentFlag                          ( m_vuiParametersPresentFlag );
   m_cEncLib.setSamePicTimingInAllOLS                             (m_samePicTimingInAllOLS);
   m_cEncLib.setAspectRatioInfoPresentFlag                        ( m_aspectRatioInfoPresentFlag);

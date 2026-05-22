@@ -894,15 +894,7 @@ protected:
   std::vector<uint8_t>  m_ifmDataPayloadByte[MAX_NUM_IMAGE_FORMAT_METADATA_SEI];
   std::string           m_ifmDataUri[MAX_NUM_IMAGE_FORMAT_METADATA_SEI];
 
-  bool                 m_postFilterHintSEIEnabled;
-  bool                 m_postFilterHintSEICancelFlag;
   bool                 m_SEITextIDCancelFlag;
-  bool                 m_postFilterHintSEIPersistenceFlag;
-  uint32_t             m_postFilterHintSEISizeY;
-  uint32_t             m_postFilterHintSEISizeX;
-  uint32_t             m_postFilterHintSEIType;
-  bool                 m_postFilterHintSEIChromaCoeffPresentFlag;
-  std::vector<int32_t> m_postFilterHintValues;
 
   bool                  m_constrainedRaslEncoding;
 

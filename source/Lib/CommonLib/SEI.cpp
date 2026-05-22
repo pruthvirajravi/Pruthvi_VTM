@@ -1150,33 +1150,22 @@ SEINeuralNetworkPostFilterActivation::SEINeuralNetworkPostFilterActivation(
   m_numInputPicShift = sei.m_numInputPicShift;
 }
 
-SEIPostFilterHint::SEIPostFilterHint(const SEIPostFilterHint& sei)
+SEITextDescription::SEITextDescription(const SEITextDescription& sei)
 {
-  m_filterHintCancelFlag = sei.m_filterHintCancelFlag;
-  m_filterHintPersistenceFlag = sei.m_filterHintPersistenceFlag;
-  m_filterHintSizeY = sei.m_filterHintSizeY;
-  m_filterHintSizeX = sei.m_filterHintSizeX;
-  m_filterHintType = sei.m_filterHintType;
-  m_filterHintChromaCoeffPresentFlag = sei.m_filterHintChromaCoeffPresentFlag;
-  m_filterHintValues = sei.m_filterHintValues;
-}
-
-  SEITextDescription::SEITextDescription(const SEITextDescription& sei)
+  m_textDescriptionID = sei.m_textDescriptionID;
+  m_textCancelFlag = sei.m_textCancelFlag;
+  m_textIDCancelFlag = sei.m_textIDCancelFlag;
+  m_textPersistenceFlag = sei.m_textPersistenceFlag;
+  m_textDescriptionPurpose = sei.m_textDescriptionPurpose;
+  m_textNumStringsMinus1 = sei.m_textNumStringsMinus1;
+  m_textDescriptionStringLang.resize(m_textNumStringsMinus1+1);
+  m_textDescriptionString.resize(m_textNumStringsMinus1+1);
+  for (int i=0; i<=m_textNumStringsMinus1; i++)
   {
-    m_textDescriptionID = sei.m_textDescriptionID;
-    m_textCancelFlag = sei.m_textCancelFlag;
-    m_textIDCancelFlag = sei.m_textIDCancelFlag;
-    m_textPersistenceFlag = sei.m_textPersistenceFlag;
-    m_textDescriptionPurpose = sei.m_textDescriptionPurpose;
-    m_textNumStringsMinus1 = sei.m_textNumStringsMinus1;
-    m_textDescriptionStringLang.resize(m_textNumStringsMinus1+1);
-    m_textDescriptionString.resize(m_textNumStringsMinus1+1);
-    for (int i=0; i<=m_textNumStringsMinus1; i++)
-    {
-      m_textDescriptionStringLang[i] = sei.m_textDescriptionStringLang[i];
-      m_textDescriptionString[i] = sei.m_textDescriptionString[i];
-    }
+    m_textDescriptionStringLang[i] = sei.m_textDescriptionStringLang[i];
+    m_textDescriptionString[i] = sei.m_textDescriptionString[i];
   }
+}
 
 SEINeuralNetworkPostFilterCharacteristics* getNnpfcWithGivenId(const SEIMessages &seiList, uint32_t id)
 {

@@ -119,7 +119,6 @@ protected:
   void xWriteSEIGreenMetadataInfo                 (const SEIGreenMetadataInfo &sei);
 #endif
   void xWriteSEITextDescription(const SEITextDescription &sei);
-  void xWriteSEIPostFilterHint(const SEIPostFilterHint &sei);
 
   void xWriteSEIEncoderOptimizationInfo(const SEIEncoderOptimizationInfo &sei);
   void xWriteSEISourcePictureTimingInfo(const SEISourcePictureTimingInfo& sei);

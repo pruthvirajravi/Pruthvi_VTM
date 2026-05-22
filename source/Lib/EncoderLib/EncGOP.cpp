@@ -1169,15 +1169,7 @@ void EncGOP::xCreatePerPictureSEIMessages (int picInGOP, SEIMessages& seiMessage
     xCreateNNPostFilterActivationSEIMessage(seiMessages, slice);
   }
 
-  if (m_pcCfg->getPostFilterHintSEIEnabled())
-  {
-    SEIPostFilterHint *postFilterHintSEI = new SEIPostFilterHint;
-
-    m_seiEncoder.initSEIPostFilterHint(postFilterHintSEI);
-    seiMessages.push_back(postFilterHintSEI);
-  }
 #if JVET_AJ0151_DSC_SEI
-
   if (m_pcCfg->getDigitallySignedContentSEICfg().enabled)
   {
     SEIDigitallySignedContentSelection *sei = new SEIDigitallySignedContentSelection;

@@ -102,7 +102,6 @@ public:
   void initSEINeuralNetworkPostFilterCharacteristics(SEINeuralNetworkPostFilterCharacteristics *sei, int filterIdx);
   void initSEINeuralNetworkPostFilterActivation(SEINeuralNetworkPostFilterActivation *sei);
   void initSEIProcessingOrderInfo(SEIProcessingOrderInfo *seiProcessingOrderInfo, SEIProcessingOrderNesting *seiProcessingOrderNesting);
-  void initSEIPostFilterHint(SEIPostFilterHint *sei);
   void initSEIEncoderOptimizationInfo(SEIEncoderOptimizationInfo *sei);
   void initSEIModalityInfo(SEIModalityInfo *sei);
   void initSEITextDescription(SEITextDescription *sei);
