@@ -39,6 +39,7 @@
 #include <cstring>
 #include <string>
 #include "SEIFilmGrainAppCfg.h"
+#include "CommonLib/SEI.h"
 #include "Utilities/program_options_lite.h"
 #if ENABLE_TRACING
 #include "CommonLib/dtrace_next.h"
@@ -136,15 +137,24 @@ bool SEIFilmGrainAppCfg::parseCfg( int argc, char* argv[] )
   bool do_help = false;
   int warnUnknowParameter = 0;
 
-  SMultiValueInput<uint32_t>    cfg_FgcSEIIntensityIntervalLowerBoundComp0(0, 255, 0, 256);
-  SMultiValueInput<uint32_t>    cfg_FgcSEIIntensityIntervalLowerBoundComp1(0, 255, 0, 256);
-  SMultiValueInput<uint32_t>    cfg_FgcSEIIntensityIntervalLowerBoundComp2(0, 255, 0, 256);
-  SMultiValueInput<uint32_t>    cfg_FgcSEIIntensityIntervalUpperBoundComp0(0, 255, 0, 256);
-  SMultiValueInput<uint32_t>    cfg_FgcSEIIntensityIntervalUpperBoundComp1(0, 255, 0, 256);
-  SMultiValueInput<uint32_t>    cfg_FgcSEIIntensityIntervalUpperBoundComp2(0, 255, 0, 256);
-  SMultiValueInput<int32_t>     cfg_FgcSEICompModelValueComp0(-32768, 32767, 0, 256 * 6);
-  SMultiValueInput<int32_t>     cfg_FgcSEICompModelValueComp1(-32768, 32767, 0, 256 * 6);
-  SMultiValueInput<int32_t>     cfg_FgcSEICompModelValueComp2(-32768, 32767, 0, 256 * 6);
+  SMultiValueInput<uint32_t>    cfg_FgcSEIIntensityIntervalLowerBound[MAX_NUM_COMPONENT] =
+  {
+    SMultiValueInput<uint32_t>(0, 255, 0, 256),
+    SMultiValueInput<uint32_t>(0, 255, 0, 256),
+    SMultiValueInput<uint32_t>(0, 255, 0, 256)
+  };
+  SMultiValueInput<uint32_t>    cfg_FgcSEIIntensityIntervalUpperBound[MAX_NUM_COMPONENT] =
+  {
+    SMultiValueInput<uint32_t>(0, 255, 0, 256),
+    SMultiValueInput<uint32_t>(0, 255, 0, 256),
+    SMultiValueInput<uint32_t>(0, 255, 0, 256)
+  };
+  SMultiValueInput<int32_t>     cfg_FgcSEICompModelValue[MAX_NUM_COMPONENT] =
+  {
+    SMultiValueInput<int32_t>(-32768, 32767, 0, 256 * 6),
+    SMultiValueInput<int32_t>(-32768, 32767, 0, 256 * 6),
+    SMultiValueInput<int32_t>(-32768, 32767, 0, 256 * 6)
+  };
 
   po::Options opts;
 
@@ -175,15 +185,15 @@ bool SEIFilmGrainAppCfg::parseCfg( int argc, char* argv[] )
   ("SEIFGCNumModelValuesMinus1Comp0",                 m_fgcSEINumModelValuesMinus1[0],                      0u, "Specifies the number of component model values minus1 on colour component 0.")
   ("SEIFGCNumModelValuesMinus1Comp1",                 m_fgcSEINumModelValuesMinus1[1],                      0u, "Specifies the number of component model values minus1 on colour component 1.")
   ("SEIFGCNumModelValuesMinus1Comp2",                 m_fgcSEINumModelValuesMinus1[2],                      0u, "Specifies the number of component model values minus1 on colour component 2.")
-  ("SEIFGCIntensityIntervalLowerBoundComp0", cfg_FgcSEIIntensityIntervalLowerBoundComp0, cfg_FgcSEIIntensityIntervalLowerBoundComp0, "Specifies the lower bound for the intensity intervals on colour component 0.")
-  ("SEIFGCIntensityIntervalLowerBoundComp1", cfg_FgcSEIIntensityIntervalLowerBoundComp1, cfg_FgcSEIIntensityIntervalLowerBoundComp1, "Specifies the lower bound for the intensity intervals on colour component 1.")
-  ("SEIFGCIntensityIntervalLowerBoundComp2", cfg_FgcSEIIntensityIntervalLowerBoundComp2, cfg_FgcSEIIntensityIntervalLowerBoundComp2, "Specifies the lower bound for the intensity intervals on colour component 2.")
-  ("SEIFGCIntensityIntervalUpperBoundComp0", cfg_FgcSEIIntensityIntervalUpperBoundComp0, cfg_FgcSEIIntensityIntervalUpperBoundComp0, "Specifies the upper bound for the intensity intervals on colour component 0.")
-  ("SEIFGCIntensityIntervalUpperBoundComp1", cfg_FgcSEIIntensityIntervalUpperBoundComp1, cfg_FgcSEIIntensityIntervalUpperBoundComp1, "Specifies the upper bound for the intensity intervals on colour component 1.")
-  ("SEIFGCIntensityIntervalUpperBoundComp2", cfg_FgcSEIIntensityIntervalUpperBoundComp2, cfg_FgcSEIIntensityIntervalUpperBoundComp2, "Specifies the upper bound for the intensity intervals on colour component 2.")
-  ("SEIFGCCompModelValuesComp0",             cfg_FgcSEICompModelValueComp0,              cfg_FgcSEICompModelValueComp0,              "Specifies the component model values on colour component 0.")
-  ("SEIFGCCompModelValuesComp1",             cfg_FgcSEICompModelValueComp1,              cfg_FgcSEICompModelValueComp1,              "Specifies the component model values on colour component 1.")
-  ("SEIFGCCompModelValuesComp2",             cfg_FgcSEICompModelValueComp2,              cfg_FgcSEICompModelValueComp2,              "Specifies the component model values on colour component 2.")
+  ("SEIFGCIntensityIntervalLowerBoundComp0", cfg_FgcSEIIntensityIntervalLowerBound[0], cfg_FgcSEIIntensityIntervalLowerBound[0], "Specifies the lower bound for the intensity intervals on colour component 0.")
+  ("SEIFGCIntensityIntervalLowerBoundComp1", cfg_FgcSEIIntensityIntervalLowerBound[1], cfg_FgcSEIIntensityIntervalLowerBound[1], "Specifies the lower bound for the intensity intervals on colour component 1.")
+  ("SEIFGCIntensityIntervalLowerBoundComp2", cfg_FgcSEIIntensityIntervalLowerBound[2], cfg_FgcSEIIntensityIntervalLowerBound[2], "Specifies the lower bound for the intensity intervals on colour component 2.")
+  ("SEIFGCIntensityIntervalUpperBoundComp0", cfg_FgcSEIIntensityIntervalUpperBound[0], cfg_FgcSEIIntensityIntervalUpperBound[0], "Specifies the upper bound for the intensity intervals on colour component 0.")
+  ("SEIFGCIntensityIntervalUpperBoundComp1", cfg_FgcSEIIntensityIntervalUpperBound[1], cfg_FgcSEIIntensityIntervalUpperBound[1], "Specifies the upper bound for the intensity intervals on colour component 1.")
+  ("SEIFGCIntensityIntervalUpperBoundComp2", cfg_FgcSEIIntensityIntervalUpperBound[2], cfg_FgcSEIIntensityIntervalUpperBound[2], "Specifies the upper bound for the intensity intervals on colour component 2.")
+  ("SEIFGCCompModelValuesComp0",             cfg_FgcSEICompModelValue[0],              cfg_FgcSEICompModelValue[0],              "Specifies the component model values on colour component 0.")
+  ("SEIFGCCompModelValuesComp1",             cfg_FgcSEICompModelValue[1],              cfg_FgcSEICompModelValue[1],              "Specifies the component model values on colour component 1.")
+  ("SEIFGCCompModelValuesComp2",             cfg_FgcSEICompModelValue[2],              cfg_FgcSEICompModelValue[2],              "Specifies the component model values on colour component 2.")
 
 #if ENABLE_TRACING
   ("TraceChannelsList",         printTracingChannelsList,              false,      "List all available tracing channels" )
@@ -263,48 +273,22 @@ bool SEIFilmGrainAppCfg::parseCfg( int argc, char* argv[] )
     }
     m_fgcSEILog2ScaleFactor = m_fgcSEILog2ScaleFactor ? m_fgcSEILog2ScaleFactor : 2;
 
-    uint32_t numModelCtr;
-    if (m_fgcSEICompModelPresent[0])
+    for (int comp = 0; comp < MAX_NUM_COMPONENT; comp++)
     {
-      numModelCtr = 0;
-      for (uint8_t i = 0; i <= m_fgcSEINumIntensityIntervalMinus1[0]; i++)
+      if (m_fgcSEICompModelPresent[comp])
       {
-        m_fgcSEIIntensityIntervalLowerBound[0][i] = uint32_t((cfg_FgcSEIIntensityIntervalLowerBoundComp0.values.size() > i) ? cfg_FgcSEIIntensityIntervalLowerBoundComp0.values[i] : 10);
-        m_fgcSEIIntensityIntervalUpperBound[0][i] = uint32_t((cfg_FgcSEIIntensityIntervalUpperBoundComp0.values.size() > i) ? cfg_FgcSEIIntensityIntervalUpperBoundComp0.values[i] : 250);
-        for (uint8_t j = 0; j <= m_fgcSEINumModelValuesMinus1[0]; j++)
-        {
-          m_fgcSEICompModelValue[0][i][j] = int32_t((cfg_FgcSEICompModelValueComp0.values.size() > numModelCtr) ? cfg_FgcSEICompModelValueComp0.values[numModelCtr] : 24);
-          numModelCtr++;
-        }
-      }
-    }
-    if (m_fgcSEICompModelPresent[1])
-    {
-      numModelCtr = 0;
-      for (uint8_t i = 0; i <= m_fgcSEINumIntensityIntervalMinus1[1]; i++)
-      {
-        m_fgcSEIIntensityIntervalLowerBound[1][i] = uint32_t((cfg_FgcSEIIntensityIntervalLowerBoundComp1.values.size() > i) ? cfg_FgcSEIIntensityIntervalLowerBoundComp1.values[i] : 60);
-        m_fgcSEIIntensityIntervalUpperBound[1][i] = uint32_t((cfg_FgcSEIIntensityIntervalUpperBoundComp1.values.size() > i) ? cfg_FgcSEIIntensityIntervalUpperBoundComp1.values[i] : 200);
+        uint32_t numModelCtr = 0;
 
-        for (uint8_t j = 0; j <= m_fgcSEINumModelValuesMinus1[1]; j++)
+        for (uint8_t i = 0; i <= m_fgcSEINumIntensityIntervalMinus1[comp]; i++)
         {
-          m_fgcSEICompModelValue[1][i][j] = int32_t((cfg_FgcSEICompModelValueComp1.values.size() > numModelCtr) ? cfg_FgcSEICompModelValueComp1.values[numModelCtr] : 16);
-          numModelCtr++;
-        }
-      }
-    }
-    if (m_fgcSEICompModelPresent[2])
-    {
-      numModelCtr = 0;
-      for (uint8_t i = 0; i <= m_fgcSEINumIntensityIntervalMinus1[2]; i++)
-      {
-        m_fgcSEIIntensityIntervalLowerBound[2][i] = uint32_t((cfg_FgcSEIIntensityIntervalLowerBoundComp2.values.size() > i) ? cfg_FgcSEIIntensityIntervalLowerBoundComp2.values[i] : 60);
-        m_fgcSEIIntensityIntervalUpperBound[2][i] = uint32_t((cfg_FgcSEIIntensityIntervalUpperBoundComp2.values.size() > i) ? cfg_FgcSEIIntensityIntervalUpperBoundComp2.values[i] : 250);
+          m_fgcSEIIntensityIntervalLowerBound[comp][i] = uint32_t((cfg_FgcSEIIntensityIntervalLowerBound[comp].values.size() > i) ? cfg_FgcSEIIntensityIntervalLowerBound[comp].values[i] : 10);
+          m_fgcSEIIntensityIntervalUpperBound[comp][i] = uint32_t((cfg_FgcSEIIntensityIntervalUpperBound[comp].values.size() > i) ? cfg_FgcSEIIntensityIntervalUpperBound[comp].values[i] : 250);
 
-        for (uint8_t j = 0; j <= m_fgcSEINumModelValuesMinus1[2]; j++)
-        {
-          m_fgcSEICompModelValue[2][i][j] = int32_t((cfg_FgcSEICompModelValueComp2.values.size() > numModelCtr) ? cfg_FgcSEICompModelValueComp2.values[numModelCtr] : 12);
-          numModelCtr++;
+          for (uint8_t j = 0; j <= m_fgcSEINumModelValuesMinus1[comp]; j++)
+          {
+            m_fgcSEICompModelValue[comp][i][j] = int32_t((cfg_FgcSEICompModelValue[comp].values.size() > numModelCtr) ? cfg_FgcSEICompModelValue[comp].values[numModelCtr] : getDefaultFgcCompModelValue(comp));
+            numModelCtr++;
+          }
         }
       }
     }

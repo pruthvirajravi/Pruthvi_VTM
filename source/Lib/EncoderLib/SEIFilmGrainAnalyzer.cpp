@@ -479,7 +479,7 @@ void FGAnalyser::init(const int width, const int height, const int sourcePadding
       for (int k = 0; k < m_compModel[i].numModelValues; k++)
       {
         // half intensity for chroma. Provided value is default value, manually tuned.
-        m_compModel[i].intensityValues[j].compModelValue[k] = i == 0 ? 16 : 8;
+        m_compModel[i].intensityValues[j].compModelValue[k] = getDefaultFgcCompModelValue(i);
       }
     }
     m_doAnalysis[i] = doAnalysis[i];
