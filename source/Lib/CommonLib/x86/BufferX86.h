@@ -172,7 +172,7 @@ template<X86_VEXT vext> void paddingSimd(Pel *dst, ptrdiff_t stride, int width, 
 
     dst -= 1;
 
-    for (size_t i = 0; i < extWidth - 8; i++)
+    for (size_t i = 0; i < extWidth - 8; i += 8)
     {
       __m128i top = _mm_loadu_si128((const __m128i *) (dst + i));
       _mm_storeu_si128((__m128i *) (dst - stride + i), top);
@@ -182,7 +182,7 @@ template<X86_VEXT vext> void paddingSimd(Pel *dst, ptrdiff_t stride, int width, 
 
     dst += height * stride;
 
-    for (size_t i = 0; i < extWidth - 8; i++)
+    for (size_t i = 0; i < extWidth - 8; i += 8)
     {
       __m128i bottom = _mm_loadu_si128((const __m128i *) (dst - stride + i));
       _mm_storeu_si128((__m128i *) (dst + i), bottom);
@@ -204,7 +204,7 @@ template<X86_VEXT vext> void paddingSimd(Pel *dst, ptrdiff_t stride, int width, 
 
     dst -= 2;
 
-    for (size_t i = 0; i < extWidth - 8; i++)
+    for (size_t i = 0; i < extWidth - 8; i += 8)
     {
       __m128i top = _mm_loadu_si128((const __m128i *) (dst + i));
       _mm_storeu_si128((__m128i *) (dst - 2 * stride + i), top);
@@ -216,7 +216,7 @@ template<X86_VEXT vext> void paddingSimd(Pel *dst, ptrdiff_t stride, int width, 
 
     dst += height * stride;
 
-    for (size_t i = 0; i < extWidth - 8; i++)
+    for (size_t i = 0; i < extWidth - 8; i += 8)
     {
       __m128i bottom = _mm_loadu_si128((const __m128i *) (dst - stride + i));
       _mm_storeu_si128((__m128i *) (dst + i), bottom);
