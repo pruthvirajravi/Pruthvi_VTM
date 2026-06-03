@@ -1101,6 +1101,8 @@ public:
   uint32_t                    getNumEntryPoints( ) const { return m_numEntryPoints;  }
   bool                        isLastSliceInSubpic();
 
+  bool                        checkAlfAPS(const int apsId) const;
+
   CcAlfFilterParam            m_ccAlfFilterParam;
   uint8_t*                    m_ccAlfFilterControl[2];
 

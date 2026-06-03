@@ -3492,10 +3492,7 @@ void EncGOP::compressGOP(int pocLast, int numPicRcvd, PicList &rcListPic, std::l
       }
     }
 
-    if (encPic)
-    {
-      xPicInitLMCS(pcPic, picHeader, pcSlice);
-    }
+    xPicInitLMCS(pcPic, picHeader, pcSlice);
 
     if( pcSlice->getSPS()->getScalingListFlag() && m_pcCfg->getUseScalingListId() == SCALING_LIST_FILE_READ )
     {
@@ -3982,7 +3979,7 @@ void EncGOP::compressGOP(int pocLast, int numPicRcvd, PicList &rcListPic, std::l
       {
         m_pcSAO->disabledRate( *pcPic->cs, pcPic->getSAO(1), m_pcCfg->getSaoEncodingRate(), m_pcCfg->getSaoEncodingRateChroma());
       }
-      if (pcSlice->getSPS()->getALFEnabledFlag() && (pcSlice->getAlfEnabledFlag(COMPONENT_Y) || pcSlice->getCcAlfCbEnabledFlag() || pcSlice->getCcAlfCrEnabledFlag()))
+      if (pcSlice->getSPS()->getALFEnabledFlag())
       {
         // IRAP AU: reset APS map
         {
@@ -4015,7 +4012,8 @@ void EncGOP::compressGOP(int pocLast, int numPicRcvd, PicList &rcListPic, std::l
                  }
                }
                // Chroma
-               activeAps |= aps->getAPSId() == pcSlice->getAlfApsIdChroma();
+               activeAps      |= aps->getAPSId() == pcSlice->getAlfApsIdChroma()
+                                 && (pcSlice->getAlfEnabledFlag(COMPONENT_Cb) || pcSlice->getAlfEnabledFlag(COMPONENT_Cr));
                // CC-ALF
                activeApsCcAlf |= pcSlice->getCcAlfCbEnabledFlag() && aps->getAPSId() == pcSlice->getCcAlfCbApsId();
                activeApsCcAlf |= pcSlice->getCcAlfCrEnabledFlag() && aps->getAPSId() == pcSlice->getCcAlfCrApsId();
@@ -4049,7 +4047,7 @@ void EncGOP::compressGOP(int pocLast, int numPicRcvd, PicList &rcListPic, std::l
             {
               pcSlice->getAlfAPSs()[apsId] = aps;
             }
-            if (apsMap->getChangedFlag(apsId))
+            if (apsMap->getChangedFlag(apsId) && pcSlice->checkAlfAPS(apsId))
             {
               changedApsId = apsId;
             }

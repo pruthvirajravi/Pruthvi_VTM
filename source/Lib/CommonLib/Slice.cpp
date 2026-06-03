@@ -3167,6 +3167,21 @@ bool Slice::isLastSliceInSubpic()
   }
 }
 
+bool Slice::checkAlfAPS(const int apsId) const
+{
+  for (int id = 0; id < m_numAlfApsIdsLuma; id++)
+  {
+    if (apsId == m_alfApsIdsLuma[id])
+    {
+      return true;
+    }
+  }
+  if (apsId == m_alfApsIdChroma)
+  {
+    return true;
+  }
+  return false;
+}
 
 #if ENABLE_TRACING
 void xTraceVPSHeader()
