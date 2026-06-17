@@ -99,10 +99,15 @@ struct Pairs
   std::vector<int>    idx;    // interval indices having this pair
 };
 
+struct Stats
+{
+  int mean;
+  int stddev;
+};
+
 typedef std::vector<std::vector<Intermediate_Int>> PelMatrix;
 typedef std::vector<std::vector<uint64_t>>         PelMatrix64u;
 typedef std::vector<std::vector<double>>           PelMatrixDouble;
-
 typedef std::vector<std::vector<long double>>      PelMatrixLongDouble;
 typedef std::vector<long double>                   PelVectorLongDouble;
 
@@ -123,8 +128,8 @@ private:
 
   unsigned int      m_convWidthS = 3, m_convHeightS = 3;	    // Pixel's row and col positions for Sobel filtering
 
-  double            m_lowThresholdRatio   = 0.1;              // low threshold rato
-  int               m_highThresholdRatio  = 3;                // high threshold rato
+  double            m_lowThresholdRatio   = 0.1;              // Low threshold rato
+  int               m_highThresholdRatio  = 3;                // High threshold rato
 
   void gradient       ( PelStorage* buff1, PelStorage* buff2,
                         unsigned int width, unsigned int height,
@@ -150,7 +155,6 @@ private:
   unsigned int m_kernelSize = 3;		// Dilation and erosion kernel size
 };
 
-
 class FGAnalyser
 {
 public:
@@ -173,7 +177,7 @@ public:
   		   
   void destroy        ();
   void initBufs       (Picture* pic);
-  void estimate_grain (Picture* pic);
+  void estimateGrain  (Picture* pic);
 
   int                                     getLog2scaleFactor()  { return m_log2ScaleFactor; };
   SEIFilmGrainCharacteristics::CompModel  getCompModel(int idx) { return m_compModel[idx];  };
@@ -187,8 +191,8 @@ private:
   BitDepths                        m_bitDepthsIn;
   int                              m_frameSkip;
   ChromaFormat                     m_chromaFormatIdc;
-  BitDepths     m_bitDepths;
-  bool          m_doAnalysis[MAX_NUM_COMPONENT] = { false, false, false };
+  BitDepths                        m_bitDepths;
+  bool                             m_doAnalysis[MAX_NUM_COMPONENT] = { false, false, false };
 
   Canny    m_edgeDetector;
   Morph    m_morphOperation;
@@ -211,42 +215,37 @@ private:
   std::vector<int> m_storedElementNumberPerInterval[MAX_NUM_COMPONENT];
 
   void findMask                     ();
-
-  void estimate_grain_parameters    ();
-  void block_transform              (const PelStorage& buff1, PelMatrix64u& squaredDctGrainBlock, int offsetX, int offsetY, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
-  void estimate_cutoff_freq         (const std::vector<PelMatrix64u>& blocks, const std::vector<int>& numEl, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
-  int  cutoff_frequency             (std::vector<double>& mean, unsigned int windowSize);
-  void estimate_scaling_factors     (std::vector<int>& dataX, std::vector<int>& dataY, unsigned int bitDepth, ComponentID compID);
-
-  bool fit_function                 (std::vector<int>& dataX, std::vector<int>& dataY, std::vector<double>& coeffs, std::vector<double>& scalingVec,
+  void estimateGrainParameters      ();
+  void blockTransform               (const PelStorage& buff1, PelMatrix64u& squaredDctGrainBlock, int offsetX, int offsetY, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
+  void estimateCutoffFreq           (const std::vector<PelMatrix64u>& blocks, const std::vector<int>& numEl, unsigned int bitDepth, ComponentID compID, unsigned int windowSize);
+  int  cutoffFrequency              (std::vector<double>& mean, unsigned int windowSize);
+  void estimateScalingFactors       (std::vector<int>& dataX, std::vector<int>& dataY, unsigned int bitDepth, ComponentID compID);
+  bool fitFunction                  (std::vector<int>& dataX, std::vector<int>& dataY, std::vector<double>& coeffs, std::vector<double>& scalingVec,
                                      int order, int bitDepth, bool secondPass, ComponentID compID);
-  bool lloyd_max                    (std::vector<double>& scalingVec, std::vector<int>& quantizedVec, double& distortion, int numQuantizedLevels, int bitDepth);
+  bool lloydMax                     (std::vector<double>& scalingVec, std::vector<int>& quantizedVec, double& distortion, int numQuantizedLevels, int bitDepth);
   void quantize                     (std::vector<double>& scalingVec, std::vector<double>& quantizedVec, double& distortion, std::vector<double> partition, std::vector<double> codebook);
-  void extend_points                (std::vector<int>& dataX, std::vector<int>& dataY, int bitDepth);
+  void extendPoints                 (std::vector<int>& dataX, std::vector<int>& dataY, int bitDepth);
 
   void setEstimatedParameters       (std::vector<int>& quantizedVec, unsigned int bitDepth, ComponentID compID);
-  void define_intervals_and_scalings(std::vector<std::vector<int>>& parameters, std::vector<int>& quantizedVec, int bitDepth);
-  void scale_down                   (std::vector<std::vector<int>>& parameters, int bitDepth);
-  void confirm_intervals            (std::vector<std::vector<int>>& parameters);
-  void merge_intervals_and_scalings (std::vector<std::vector<int>>& parameters, int bitDepth);
-  void replace_cutoff               (ComponentID compID, int replacementH=8, int replacementV=8);
-  void limit_cutoff                 (ComponentID compID, int replacementH=8, int replacementV=8);
-  void limit_cutoff_consecutive     (ComponentID compID);
-  int  limit_cutoff_pairs           (std::vector<Pairs>& pairs, int maxUnique=10);
+  void defineIntervalsAndScalings   (std::vector<std::vector<int>>& parameters, std::vector<int>& quantizedVec, int bitDepth);
+  void scaleDown                    (std::vector<std::vector<int>>& parameters, int bitDepth);
+  void confirmIntervals             (std::vector<std::vector<int>>& parameters);
+  void mergeIntervalsAndScalings    (std::vector<std::vector<int>>& parameters, int bitDepth);
+  void replaceCutoff                (ComponentID compID, int& replacementH, int& replacementV);
+  void limitCutoff                  (ComponentID compID, int& replacementH, int& replacementV);
+  void limitCutoffConsecutive       (ComponentID compID);
+  int  limitCutoffPairs             (std::vector<Pairs>& pairs, int maxUnique=10);
 
   long double ldpow                 (long double n, unsigned p);
-  int         meanVar               (PelStorage& buffer, int windowSize, ComponentID compID, int offsetX, int offsetY, bool getVar);
-  int         count_edges           (PelStorage& buffer, int windowSize, ComponentID compID, int offsetX, int offsetY);
-
-  void subsample                    (const PelStorage& input, PelStorage& output, ComponentID compID, const int factor = 2, const int padding = 0) const;
-  void upsample                     (const PelStorage& input, PelStorage& output, ComponentID compID, const int factor = 2, const int padding = 0) const;
-  void combineMasks                 (PelStorage& buff, PelStorage& buff2, ComponentID compID);
-  void suppressLowIntensity         (const PelStorage& buff1, PelStorage& buff2, unsigned int bitDepth, ComponentID compID);
+  Stats       meanStdDev            (PelStorage& buffer, int windowSize, ComponentID compID, int offsetX, int offsetY);
+  int         countEdges            (PelStorage& buffer, int windowSize, ComponentID compID, int offsetX, int offsetY);
+  void        subsample             (const PelStorage& input, PelStorage& output, ComponentID compID, const int factor = 2, const int padding = 0) const;
+  void        upsample              (const PelStorage& input, PelStorage& output, ComponentID compID, const int factor = 2, const int padding = 0) const;
+  void        combineMasks          (PelStorage& buff, PelStorage& buff2, ComponentID compID);
+  void        suppressLowIntensity  (const PelStorage& buff1, PelStorage& buff2, unsigned int bitDepth, ComponentID compID);
 
 }; // END CLASS DEFINITION
 
 //! \}
 
 #endif // __SEIFILMGRAINANALYZER__
-
-

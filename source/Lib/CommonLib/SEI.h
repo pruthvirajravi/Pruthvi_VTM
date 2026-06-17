@@ -1039,6 +1039,11 @@ public:
   std::vector<uint8_t> m_userData;
 };
 
+inline constexpr uint32_t getDefaultFgcCompModelValue(int component)
+{
+  return component == COMPONENT_Y ? 16 : 8;
+}
+
 class SEIFilmGrainCharacteristics : public SEI
 {
 public:
