@@ -2724,6 +2724,161 @@ int EncCfg::getQPForPicture(const uint32_t gopIndex, const Slice *pSlice) const
       }
       else
       {
+#if JVET_AP0070
+        int currPoc = pSlice->getPOC() + m_frameSkip;
+        int qpOffset = 0;
+        if ((getGOPSize()==8 || getGOPSize() == 16) && !(currPoc % 32))
+        {
+          int theOffset = 0;
+          std::map<int, int> interQPOffsetFrame;
+          interQPOffsetFrame = m_interQPOffsetFrame;
+          bool offsetChange = false;
+          for (std::map<int, int>::iterator it = interQPOffsetFrame.begin(); it != interQPOffsetFrame.end();
+            ++it)
+          {
+            int frame = it->first;
+            int offset = it->second;
+            if (32 % frame == 0)
+            {
+              theOffset = offset;
+              offsetChange = true;
+            }
+          }
+          if (!offsetChange)
+          {
+            const GOPEntry& gopEntry = getGOPEntry(gopIndex);
+            // adjust QP according to the QP offset for the GOP entry.
+            theOffset = gopEntry.m_QPOffset;
+          }
+          qpOffset = theOffset;
+          qp += qpOffset;
+
+          double theModelOffset = 0;
+          std::map<int, double> interQPOffsetModelOffsetFrame;
+          interQPOffsetModelOffsetFrame = m_interQPOffsetModelOffsetFrame;
+          bool modelOffsetChange = false;
+          for (std::map<int, double>::iterator it = interQPOffsetModelOffsetFrame.begin(); it != interQPOffsetModelOffsetFrame.end();
+            ++it)
+          {
+            int frame = it->first;
+            double offset = it->second;
+            if (32 % frame == 0)
+            {
+              theModelOffset = offset;
+              modelOffsetChange = true;
+            }
+          }
+          if (!modelOffsetChange)
+          {
+            const GOPEntry& gopEntry = getGOPEntry(gopIndex);
+            theModelOffset = gopEntry.m_QPOffsetModelOffset;
+          }
+          double theModelScale = 0;
+          std::map<int, double> interQPOffsetModelScaleFrame;
+          interQPOffsetModelScaleFrame = m_interQPOffsetModelScaleFrame;
+          bool modelScaleChange = false;
+          for (std::map<int, double>::iterator it = interQPOffsetModelScaleFrame.begin(); it != interQPOffsetModelScaleFrame.end();
+            ++it)
+          {
+            int frame = it->first;
+            double offset = it->second;
+            if (32 % frame == 0)
+            {
+              theModelScale = offset;
+              modelScaleChange = true;
+            }
+          }
+          if (!modelScaleChange)
+          {
+            const GOPEntry& gopEntry = getGOPEntry(gopIndex);
+            theModelScale = gopEntry.m_QPOffsetModelScale;
+          }
+          double dqpOffset = (qp * theModelScale) + theModelOffset + 0.5;
+          qpOffset = (int)floor(Clip3<double>(0.0, 3.0, dqpOffset));
+
+        }
+        else if (getGOPSize() == 8 && !(currPoc % 16))
+        {
+          int theOffset = 0;
+          std::map<int, int> interQPOffsetFrame;
+          interQPOffsetFrame = m_interQPOffsetFrame;
+          bool offsetChange = false;
+          for (std::map<int, int>::iterator it = interQPOffsetFrame.begin(); it != interQPOffsetFrame.end();
+            ++it)
+          {
+            int frame = it->first;
+            int offset = it->second;
+            if (16 % frame == 0)
+            {
+              theOffset = offset;
+              offsetChange = true;
+            }
+          }
+          if (!offsetChange)
+          {
+            const GOPEntry& gopEntry = getGOPEntry(gopIndex);
+            // adjust QP according to the QP offset for the GOP entry.
+            theOffset = gopEntry.m_QPOffset;
+          }
+          qpOffset = theOffset;
+          qp += qpOffset;
+
+          double theModelOffset = 0;
+          std::map<int, double> interQPOffsetModelOffsetFrame;
+          interQPOffsetModelOffsetFrame = m_interQPOffsetModelOffsetFrame;
+          bool modelOffsetChange = false;
+          for (std::map<int, double>::iterator it = interQPOffsetModelOffsetFrame.begin(); it != interQPOffsetModelOffsetFrame.end();
+            ++it)
+          {
+            int frame = it->first;
+            double offset = it->second;
+            if (16 % frame == 0)
+            {
+              theModelOffset = offset;
+              modelOffsetChange = true;
+            }
+          }
+          if (!modelOffsetChange)
+          {
+            const GOPEntry& gopEntry = getGOPEntry(gopIndex);
+            theModelOffset = gopEntry.m_QPOffsetModelOffset;
+          }
+
+          double theModelScale = 0;
+          std::map<int, double> interQPOffsetModelScaleFrame;
+          interQPOffsetModelScaleFrame = m_interQPOffsetModelScaleFrame;
+          bool modelScaleChange = false;
+          for (std::map<int, double>::iterator it = interQPOffsetModelScaleFrame.begin(); it != interQPOffsetModelScaleFrame.end();
+            ++it)
+          {
+            int frame = it->first;
+            double offset = it->second;
+            if (16 % frame == 0)
+            {
+              theModelScale = offset;
+              modelScaleChange = true;
+            }
+          }
+          if (!modelScaleChange)
+          {
+            const GOPEntry& gopEntry = getGOPEntry(gopIndex);
+            theModelScale = gopEntry.m_QPOffsetModelScale;
+          }
+          // adjust QP according to QPOffsetModel for the GOP entry.
+          double dqpOffset = (qp * theModelScale) + theModelOffset + 0.5;
+          qpOffset = (int)floor(Clip3<double>(0.0, 3.0, dqpOffset));
+        }
+        else
+        {
+          const GOPEntry& gopEntry = getGOPEntry(gopIndex);
+          // adjust QP according to the QP offset for the GOP entry.
+          qp += gopEntry.m_QPOffset;
+
+          // adjust QP according to QPOffsetModel for the GOP entry.
+          double dqpOffset = qp * gopEntry.m_QPOffsetModelScale + gopEntry.m_QPOffsetModelOffset + 0.5;
+          qpOffset = (int)floor(Clip3<double>(0.0, 3.0, dqpOffset));
+        }
+#else
         const GOPEntry &gopEntry=getGOPEntry(gopIndex);
         // adjust QP according to the QP offset for the GOP entry.
         qp +=gopEntry.m_QPOffset;
@@ -2731,6 +2886,7 @@ int EncCfg::getQPForPicture(const uint32_t gopIndex, const Slice *pSlice) const
         // adjust QP according to QPOffsetModel for the GOP entry.
         double dqpOffset=qp*gopEntry.m_QPOffsetModelScale+gopEntry.m_QPOffsetModelOffset+0.5;
         int qpOffset = (int)floor(Clip3<double>(0.0, 3.0, dqpOffset));
+#endif
         qp += qpOffset ;
       }
     }
