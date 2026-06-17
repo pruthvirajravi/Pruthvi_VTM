@@ -154,9 +154,7 @@ public:
     return val;
   }
 
-#if RExt__DECODER_DEBUG_BIT_STATISTICS
   uint32_t getNumBufferedBytes() const { return m_numFutureBytes; }
-#endif
 
 private:
   uint32_t      m_numFutureBytes; /* number of valid bytes in m_futureBytes */
@@ -187,5 +185,28 @@ struct AnnexBStats
 };
 
 bool byteStreamNALUnit(InputByteStream& bs, std::vector<uint8_t>& nalUnit, AnnexBStats& stats);
+
+inline std::streampos getLogicalStreamPos(std::istream &bitstreamFile, class InputByteStream &bytestream)
+{
+  std::streampos pos;
+  std::ios_base::iostate state = bitstreamFile.rdstate();
+  std::ios_base::iostate oldExceptions = bitstreamFile.exceptions();
+  
+  bitstreamFile.exceptions(std::ios_base::goodbit);
+  bitstreamFile.clear();
+  
+  pos = bitstreamFile.tellg();
+  
+  if (state & std::ios_base::eofbit)
+  {
+    bitstreamFile.clear(state);
+    return pos;
+  }
+  
+  bitstreamFile.clear(state);
+  bitstreamFile.exceptions(oldExceptions);
+  
+  return pos - std::streamoff(bytestream.getNumBufferedBytes());
+}
 
 //! \}

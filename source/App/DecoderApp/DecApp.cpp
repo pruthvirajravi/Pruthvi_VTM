@@ -207,6 +207,9 @@ uint32_t DecApp::decode()
   int lastNaluLayerId = -1;
   bool decodedSliceInAU = false;
 
+  std::streampos startPicPos = getLogicalStreamPos(bitstreamFile, bytestream);
+  int64_t accumulatedSeiBytes = 0;
+
   while (!!bitstreamFile)
   {
     InputNALUnit nalu;
@@ -234,6 +237,11 @@ uint32_t DecApp::decode()
       {
         // read NAL unit header
         read(nalu);
+
+        if (nalu.m_nalUnitType == NAL_UNIT_PREFIX_SEI || nalu.m_nalUnitType == NAL_UNIT_SUFFIX_SEI)
+        {
+          accumulatedSeiBytes += stats.m_numLeadingZero8BitsBytes + stats.m_numZeroByteBytes + stats.m_numStartCodePrefixBytes + stats.m_numBytesInNALUnit + stats.m_numTrailingZero8BitsBytes;
+        }
 
         // flush output for first slice of an IDR picture
         if(m_cDecLib.getFirstSliceInPicture() &&
@@ -376,12 +384,15 @@ uint32_t DecApp::decode()
 
     if (bNewPicture || !bitstreamFile || nalu.m_nalUnitType == NAL_UNIT_EOS)
     {
+      std::streampos endPicPos = getLogicalStreamPos(bitstreamFile, bytestream);
+      int64_t bytesRead = endPicPos - startPicPos - accumulatedSeiBytes;
+
       if (!m_cDecLib.getFirstSliceInSequence(nalu.m_nuhLayerId) && !bPicSkipped)
       {
         if (!loopFiltered[nalu.m_nuhLayerId] || bitstreamFile)
         {
           m_cDecLib.executeLoopFilters();
-          m_cDecLib.finishPicture(poc, pcListPic, INFO, m_newCLVS[nalu.m_nuhLayerId]);
+          m_cDecLib.finishPicture(poc, pcListPic, INFO, m_newCLVS[nalu.m_nuhLayerId], bytesRead);
         }
         loopFiltered[nalu.m_nuhLayerId] = (nalu.m_nalUnitType == NAL_UNIT_EOS);
         if (nalu.m_nalUnitType == NAL_UNIT_EOS)
@@ -405,6 +416,8 @@ uint32_t DecApp::decode()
       {
         m_cDecLib.setFirstSliceInPicture(true);
       }
+      startPicPos = endPicPos;
+      accumulatedSeiBytes = 0;
     }
 
     if( pcListPic )

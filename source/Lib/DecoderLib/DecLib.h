@@ -286,7 +286,7 @@ public:
   void  deletePicBuffer();
 
   void  executeLoopFilters();
-  void finishPicture(int &poc, PicList *&rpcListPic, MsgLevel msgl = INFO, bool associatedWithNewClvs = false);
+  void  finishPicture(int &poc, PicList *&rpcListPic, MsgLevel msgl = INFO, bool associatedWithNewClvs = false, int64_t bytesRead = -1);
   void  finishPictureLight(int& poc, PicList*& rpcListPic );
   void  checkNoOutputPriorPics (PicList* rpcListPic);
   void  checkNalUnitConstraints( uint32_t naluType );

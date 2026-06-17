@@ -118,6 +118,9 @@ bool tryDecodePicture(Picture *pcEncPic, const int expectedPoc, const std::strin
     int lastDecodedLayerId = 0;
     bool decodedSliceInAU = false;
 
+    std::streampos startPicPos = getLogicalStreamPos(*bitstreamFile[layerIdx], *bytestream[layerIdx]);
+    int64_t accumulatedSeiBytes = 0;
+
     // main decoder loop
     while( !!*bitstreamFile[layerIdx] && goOn )
     {
@@ -146,6 +149,10 @@ bool tryDecodePicture(Picture *pcEncPic, const int expectedPoc, const std::strin
         else
         {
           read(nalu);
+          if (nalu.m_nalUnitType == NAL_UNIT_PREFIX_SEI || nalu.m_nalUnitType == NAL_UNIT_SUFFIX_SEI)
+          {
+            accumulatedSeiBytes += stats.m_numLeadingZero8BitsBytes + stats.m_numZeroByteBytes + stats.m_numStartCodePrefixBytes + stats.m_numBytesInNALUnit + stats.m_numTrailingZero8BitsBytes;
+          }
           int iSkipFrame = 0;
           if (nalu.m_nuhLayerId == pcEncPic->layerId
             || (layerInitialized[nalu.m_nuhLayerId] == false && nalu.m_nuhLayerId < pcEncPic->layerId))
@@ -173,6 +180,9 @@ bool tryDecodePicture(Picture *pcEncPic, const int expectedPoc, const std::strin
 
       if ((bNewPicture || !*bitstreamFile[layerIdx] || nalu.m_nalUnitType == NAL_UNIT_EOS) && !pcDecLib->getFirstSliceInSequence(lastDecodedLayerId))
       {
+        std::streampos endPicPos = getLogicalStreamPos(*bitstreamFile[layerIdx], *bytestream[layerIdx]);
+        int64_t bytesRead = endPicPos - startPicPos - accumulatedSeiBytes;
+
         if (!loopFiltered[lastDecodedLayerId] || *bitstreamFile[layerIdx])
         {
           pcDecLib->finishPictureLight( poc, pcListPic );
@@ -300,7 +310,7 @@ bool tryDecodePicture(Picture *pcEncPic, const int expectedPoc, const std::strin
             pcDecLib->executeLoopFilters();
           }
 
-          pcDecLib->finishPicture( poc, pcListPic, DETAILS );
+          pcDecLib->finishPicture( poc, pcListPic, DETAILS, false, bytesRead );
 
           // write output
           if( ! pcListPic->empty())
@@ -393,7 +403,8 @@ bool tryDecodePicture(Picture *pcEncPic, const int expectedPoc, const std::strin
         {
           pcDecLib->setFirstSliceInSequence(true, lastDecodedLayerId);
         }
-
+        startPicPos = endPicPos;
+        accumulatedSeiBytes = 0;
       }
       else if ((bNewPicture || !*bitstreamFile[layerIdx] || nalu.m_nalUnitType == NAL_UNIT_EOS) && pcDecLib->getFirstSliceInSequence(lastDecodedLayerId))
       {
@@ -918,7 +929,7 @@ void DecLib::finishPictureLight(int& poc, PicList*& rpcListPic )
   m_puCounter++;
 }
 
-void DecLib::finishPicture(int &poc, PicList *&rpcListPic, MsgLevel msgl, bool associatedWithNewClvs)
+void DecLib::finishPicture(int &poc, PicList *&rpcListPic, MsgLevel msgl, bool associatedWithNewClvs, int64_t bytesRead)
 {
 #if RExt__DECODER_DEBUG_TOOL_STATISTICS
   CodingStatistics::StatTool& s = CodingStatistics::GetStatisticTool( STATS__TOOL_TOTAL_FRAME );
@@ -955,6 +966,10 @@ void DecLib::finishPicture(int &poc, PicList *&rpcListPic, MsgLevel msgl, bool a
          c,
          pcSlice->getSliceQp() );
   msg( msgl, "[DT %6.3f] ", pcSlice->getProcessingTime() );
+  if (bytesRead >= 0)
+  {
+    msg( msgl, "[%lld bit] ", (long long)bytesRead * 8 );
+  }
 
   for (int refList = 0; refList < 2; refList++)
   {
@@ -4352,10 +4367,8 @@ bool DecLib::isNewPicture(std::ifstream *bitstreamFile, class InputByteStream *b
   // save stream position for backup
 #if RExt__DECODER_DEBUG_STATISTICS
   CodingStatistics::CodingStatisticsData* backupStats = new CodingStatistics::CodingStatisticsData(CodingStatistics::GetStatistics());
-  std::streampos location = bitstreamFile->tellg() - std::streampos(bytestream->getNumBufferedBytes());
-#else
-  std::streampos location = bitstreamFile->tellg();
 #endif
+  std::streampos location = bitstreamFile->tellg() - std::streampos(bytestream->getNumBufferedBytes());
 
   // look ahead until picture start location is determined
   while (!finished && !!(*bitstreamFile))
@@ -4427,20 +4440,15 @@ bool DecLib::isNewPicture(std::ifstream *bitstreamFile, class InputByteStream *b
     }
   }
 
-  // restore previous stream location - minus 3 due to the need for the annexB parser to read three extra bytes
-#if RExt__DECODER_DEBUG_BIT_STATISTICS
   bitstreamFile->clear();
   bitstreamFile->seekg(location);
   bytestream->reset();
+#if RExt__DECODER_DEBUG_BIT_STATISTICS
   CodingStatistics::SetStatistics(*backupStats);
 #if RExt__DECODER_DEBUG_TOOL_MAX_FRAME_STATS
   CodingStatistics::UpdateMaxStat(backupStats);
 #endif
   delete backupStats;
-#else
-  bitstreamFile->clear();
-  bitstreamFile->seekg(location-std::streamoff(3));
-  bytestream->reset();
 #endif
 
   // return TRUE if next NAL unit is the start of a new picture
@@ -4464,10 +4472,8 @@ bool DecLib::isNewAccessUnit( bool newPicture, std::ifstream *bitstreamFile, cla
   // save stream position for backup
 #if RExt__DECODER_DEBUG_STATISTICS
   CodingStatistics::CodingStatisticsData* backupStats = new CodingStatistics::CodingStatisticsData(CodingStatistics::GetStatistics());
-  std::streampos location = bitstreamFile->tellg() - std::streampos(bytestream->getNumBufferedBytes());
-#else
-  std::streampos location = bitstreamFile->tellg();
 #endif
+  std::streampos location = bitstreamFile->tellg() - std::streampos(bytestream->getNumBufferedBytes());
 
   // look ahead until access unit start location is determined
   while (!finished && !!(*bitstreamFile))
@@ -4522,19 +4528,15 @@ bool DecLib::isNewAccessUnit( bool newPicture, std::ifstream *bitstreamFile, cla
   }
 
   // restore previous stream location
-#if RExt__DECODER_DEBUG_BIT_STATISTICS
   bitstreamFile->clear();
   bitstreamFile->seekg(location);
   bytestream->reset();
+#if RExt__DECODER_DEBUG_BIT_STATISTICS
   CodingStatistics::SetStatistics(*backupStats);
 #if RExt__DECODER_DEBUG_TOOL_MAX_FRAME_STATS
   CodingStatistics::UpdateMaxStat(backupStats);
 #endif
   delete backupStats;
-#else
-  bitstreamFile->clear();
-  bitstreamFile->seekg(location);
-  bytestream->reset();
 #endif
 
   // return TRUE if next NAL unit is the start of a new picture
