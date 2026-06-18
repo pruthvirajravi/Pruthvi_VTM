@@ -1468,7 +1468,9 @@ void SEIReader::xParseSEIGreenMetadataInfo(SEIGreenMetadataInfo& sei, uint32_t p
           sei.m_greenMetadataAMIPreprocessingScaleIdc.resize(totalSize);
         }
         if (greenMetadataAMIBacklightFlag)
+        {
           sei.m_greenMetadataAMIBacklightScalingIdc.resize(totalSize);
+        }
       }
 
       sei.m_greenMetadataAMIEnergyReductionRate.resize(energyQualitySize);

@@ -55,7 +55,7 @@ private:
   bool                  m_fullRangeFlag;
 
 public:
-  SEIGreenMetadataInfo* m_pGreenMetadataInfo;
+  SEIGreenMetadataInfo* m_greenMetadataInfo;
 
 public:
   SEIGreenMetadataApply();

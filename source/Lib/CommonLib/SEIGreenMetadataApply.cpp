@@ -40,7 +40,7 @@
 #if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
 
 SEIGreenMetadataApply::SEIGreenMetadataApply()
-  : m_width(0), m_height(0), m_chromaFormat(ChromaFormat::UNDEFINED), m_bitDepth(0), m_pGreenMetadataInfo(nullptr)
+  : m_width(0), m_height(0), m_chromaFormat(ChromaFormat::UNDEFINED), m_bitDepth(0), m_greenMetadataInfo(nullptr)
 {
 }
 
@@ -51,12 +51,12 @@ void SEIGreenMetadataApply::create(uint32_t width, uint32_t height, ChromaFormat
   m_chromaFormat       = fmt;
   m_bitDepth           = bitDepth;
   m_fullRangeFlag      = fullRangeFlag;
-  m_pGreenMetadataInfo = new SEIGreenMetadataInfo;
+  m_greenMetadataInfo = new SEIGreenMetadataInfo;
 }
 
 SEIGreenMetadataApply::~SEIGreenMetadataApply()
 {
-  delete m_pGreenMetadataInfo;
+  delete m_greenMetadataInfo;
 }
 
 void SEIGreenMetadataApply::apply(PelStorage* attenuationMap, PelStorage* attenuatedBuf)
@@ -69,13 +69,16 @@ void SEIGreenMetadataApply::apply(PelStorage* attenuationMap, PelStorage* attenu
     Pel* y0_row = y0.buf + i * y0.stride;
     const Pel* y1_row = y1.buf + i * y1.stride;
 
-    if (m_pGreenMetadataInfo->m_greenMetadataAMIAttenuationCompIdc[0] == 0)  /* Apply luma component of the attenuation map to the luma component of the primary picture */
+    if (m_greenMetadataInfo->m_greenMetadataAMIAttenuationCompIdc[0] == 0)  /* Apply luma component of the attenuation map to the luma component of the primary picture */
     {
-      if (m_pGreenMetadataInfo->m_greenMetadataAMIAttenuationUseIdc[0] == 0) /* Subtraction */
-        for (int j = 0; j < y0.width; j++) {
+      if (m_greenMetadataInfo->m_greenMetadataAMIAttenuationUseIdc[0] == 0) /* Subtraction */
+      {
+        for (int j = 0; j < y0.width; j++)
+        {
           y0_row[j] -= y1_row[j];
-          y0_row[j] = std::max((int)y0_row[j], m_fullRangeFlag ? 0 : 16 * (1 << (m_bitDepth - 8)));
+          y0_row[j] = std::max((int) y0_row[j], m_fullRangeFlag ? 0 : 16 * (1 << (m_bitDepth - 8)));
         }
+      }
     }
   }
 }

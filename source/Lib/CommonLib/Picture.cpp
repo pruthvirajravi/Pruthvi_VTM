@@ -1599,14 +1599,14 @@ PelUnitBuf Picture::getDisplayBufAttenuated(PelStorage* attenuationMap)
     payloadType = (*message)->payloadType();
     if (payloadType == SEI::PayloadType::GREEN_METADATA)
     {
-      *m_greenMetadataCharacteristic->m_pGreenMetadataInfo = *static_cast<SEIGreenMetadataInfo*>(*message);
+      *m_greenMetadataCharacteristic->m_greenMetadataInfo = *static_cast<SEIGreenMetadataInfo*>(*message);
       break;
     }
   }
 
   m_attenuatedBuf->copyFrom(getRecoBuf());
 
-  if (m_greenMetadataCharacteristic->m_pGreenMetadataInfo != nullptr)
+  if (m_greenMetadataCharacteristic->m_greenMetadataInfo != nullptr)
   {
     m_greenMetadataCharacteristic->apply(attenuationMap, m_attenuatedBuf);
   }
