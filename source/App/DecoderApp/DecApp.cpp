@@ -601,6 +601,16 @@ uint32_t DecApp::decode()
                                                             layerOutputBitDepth, bitDepths);   // write mode
           }
         }
+
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+        if (!m_SEIGreenMetadataAttenuatedFileName.empty() && !m_cVideoIOYuvSEIGreenMetadataAttenuatedFile.isOpen())
+        {
+          if ((m_cDecLib.getVPS() != nullptr && (m_cDecLib.getVPS()->getMaxLayers() == 1 || xIsNaluWithinTargetOutputLayerIdSet(&nalu))) || m_cDecLib.getVPS() == nullptr)
+          {
+            m_cVideoIOYuvSEIGreenMetadataAttenuatedFile.open(m_SEIGreenMetadataAttenuatedFileName, true, layerOutputBitDepth, layerOutputBitDepth, bitDepths);
+          }
+        }
+#endif
       }
       if (!m_annotatedRegionsSEIFileName.empty())
       {
@@ -983,6 +993,12 @@ void DecApp::xDestroyDecLib()
       recFile.second.close();
     }
   }
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+  if (!m_SEIGreenMetadataAttenuatedFileName.empty())
+  {
+    m_cVideoIOYuvSEIGreenMetadataAttenuatedFile.close();
+  }
+#endif
 
   // destroy decoder class
   m_cDecLib.destroy();
@@ -1211,6 +1227,51 @@ void DecApp::xWriteOutput( PicList* pcListPic, uint32_t tId )
           }
         }
 
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+        // Perform green metadata with AMI on decoded frame and write to output attenuated YUV file
+        if (!m_SEIGreenMetadataAttenuatedFileName.empty())
+        {
+          if (m_iPOCLastDisplay == -MAX_INT)
+          {
+            m_attenuationMap.create(UnitArea(pcPic->cs->sps->getChromaFormatIdc(), Area(0, 0, pcPic->cs->pps->getPicWidthInLumaSamples(), pcPic->cs->pps->getPicHeightInLumaSamples())));
+            m_attenuationMap.getBuf(COMPONENT_Y).fill(0);
+            m_attenuationMap.getBuf(COMPONENT_Cb).fill(0);
+            m_attenuationMap.getBuf(COMPONENT_Cr).fill(0);
+          }
+
+          if (pcPic->layerId == 0)
+          {
+            for (Picture* p : *pcListPic)
+            {
+              if (p->getPOC() == pcPic->getPOC() && p->layerId == m_greenMetadataAMILayerId)
+              {
+                m_attenuationMap.copyFrom(p->getRecoBuf());
+              }
+            }
+
+            const Window& conf = pcPic->getConformanceWindow();
+            const SPS* sps = pcPic->cs->sps;
+            ChromaFormat chromaFormatIdc = sps->getChromaFormatIdc();
+            if (m_upscaledOutput)
+            {
+              m_cVideoIOYuvSEIGreenMetadataAttenuatedFile.writeUpscaledPicture(
+                *sps, *pcPic->cs->pps, pcPic->getDisplayBufAttenuated(&m_attenuationMap), m_outputColourSpaceConvert, m_packedYUVMode,
+                m_upscaledOutput, ChromaFormat::UNDEFINED, m_clipOutputVideoToRec709Range, m_upscaleFilterForDisplay, m_upscaledOutputWidth, m_upscaledOutputHeight);
+            }
+            else
+            {
+              m_cVideoIOYuvSEIGreenMetadataAttenuatedFile.write(
+                pcPic->getRecoBuf().get(COMPONENT_Y).width, pcPic->getRecoBuf().get(COMPONENT_Y).height,
+                pcPic->getDisplayBufAttenuated(&m_attenuationMap), m_outputColourSpaceConvert, m_packedYUVMode,
+                conf.getWindowLeftOffset() * SPS::getWinUnitX(chromaFormatIdc),
+                conf.getWindowRightOffset() * SPS::getWinUnitX(chromaFormatIdc),
+                conf.getWindowTopOffset() * SPS::getWinUnitY(chromaFormatIdc),
+                conf.getWindowBottomOffset() * SPS::getWinUnitY(chromaFormatIdc), ChromaFormat::UNDEFINED,
+                m_clipOutputVideoToRec709Range);
+            }
+          }
+        }
+#endif
 
         if (!m_shutterIntervalPostFileName.empty() && getShutterFilterFlag())
         {
@@ -1464,6 +1525,50 @@ void DecApp::xFlushOutput( PicList* pcListPic, const int layerId )
               m_clipOutputVideoToRec709Range);
           }
         }
+
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+        // Perform green metadata with AMI on decoded frame and write to output attenuated YUV file
+        if (!m_SEIGreenMetadataAttenuatedFileName.empty())
+        {
+          if (m_iPOCLastDisplay == -MAX_INT)
+          {
+            m_attenuationMap.create(UnitArea(pcPic->cs->sps->getChromaFormatIdc(), Area(0, 0, pcPic->cs->pps->getPicWidthInLumaSamples(), pcPic->cs->pps->getPicHeightInLumaSamples())));
+            m_attenuationMap.getBuf(COMPONENT_Y).fill(0);
+            m_attenuationMap.getBuf(COMPONENT_Cb).fill(0);
+            m_attenuationMap.getBuf(COMPONENT_Cr).fill(0);
+          }
+
+          if (pcPic->layerId == 0)
+          {
+            for (Picture* p : *pcListPic)
+            {
+              if (p->getPOC() == pcPic->getPOC() && p->layerId == m_greenMetadataAMILayerId)
+              {
+                m_attenuationMap.copyFrom(p->getRecoBuf());
+              }
+            }
+
+            ChromaFormat chromaFormatIdc = sps->getChromaFormatIdc();
+            if (m_upscaledOutput)
+            {
+              m_cVideoIOYuvSEIGreenMetadataAttenuatedFile.writeUpscaledPicture(
+                *sps, *pcPic->cs->pps, pcPic->getDisplayBufAttenuated(&m_attenuationMap), m_outputColourSpaceConvert, m_packedYUVMode,
+                m_upscaledOutput, ChromaFormat::UNDEFINED, m_clipOutputVideoToRec709Range, m_upscaleFilterForDisplay, m_upscaledOutputWidth, m_upscaledOutputHeight);
+            }
+            else
+            {
+              m_cVideoIOYuvSEIGreenMetadataAttenuatedFile.write(
+                pcPic->getRecoBuf().get(COMPONENT_Y).width, pcPic->getRecoBuf().get(COMPONENT_Y).height,
+                pcPic->getDisplayBufAttenuated(&m_attenuationMap), m_outputColourSpaceConvert, m_packedYUVMode,
+                conf.getWindowLeftOffset() * SPS::getWinUnitX(chromaFormatIdc),
+                conf.getWindowRightOffset() * SPS::getWinUnitX(chromaFormatIdc),
+                conf.getWindowTopOffset() * SPS::getWinUnitY(chromaFormatIdc),
+                conf.getWindowBottomOffset() * SPS::getWinUnitY(chromaFormatIdc), ChromaFormat::UNDEFINED,
+                m_clipOutputVideoToRec709Range);
+            }
+          }
+        }
+#endif
 
         if (!m_shutterIntervalPostFileName.empty() && getShutterFilterFlag())
         {

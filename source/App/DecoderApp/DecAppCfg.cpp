@@ -98,6 +98,10 @@ bool DecAppCfg::parseCfg( int argc, char* argv[] )
   ("SEIColourRemappingInfoFilename", m_colourRemapSEIFileName,         std::string(""), "Colour Remapping YUV output file name. If empty, no remapping is applied (ignore SEI message)\n")
   ("SEICTIFilename",            m_SEICTIFileName,                      std::string(""), "CTI YUV output file name. If empty, no Colour Transform is applied (ignore SEI message)\n")
   ("SEIFGSFilename",            m_SEIFGSFileName,                      std::string(""), "FGS YUV output file name. If empty, no film grain is applied (ignore SEI message)\n")
+#if GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+  ("SEIGreenMetadataAttenuatedFilename", m_SEIGreenMetadataAttenuatedFileName, std::string(""), "Green Metadata attenuated YUV output file name. If empty, no attenuation map information is applied (ignore SEI message)\n")
+  ("SEIGreenMetadataAMILayerId", m_greenMetadataAMILayerId,            1,          "layer identifier of the attenuation map to be applied")
+#endif
   ("SEIAnnotatedRegionsInfoFilename", m_annotatedRegionsSEIFileName,   std::string(""), "Annotated regions output file name. If empty, no object information will be saved (ignore SEI message)\n")
   ("SEIObjectMaskInfosFilename", m_objectMaskInfoSEIFileName,          std::string(""), "Object mask information output file name. If empty, no object mask information will be saved (ignore SEI message)\n")
   ("OutputDecodedSEIMessagesFilename", m_outputDecodedSEIMessagesFilename, std::string(""), "When non empty, output decoded SEI messages to the indicated file. If file is '-', then output to stdout\n")
@@ -275,6 +279,9 @@ DecAppCfg::DecAppCfg()
   , m_colourRemapSEIFileName()
   , m_SEICTIFileName()
   , m_SEIFGSFileName()
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+  , m_SEIGreenMetadataAttenuatedFileName()
+#endif
   , m_annotatedRegionsSEIFileName()
   , m_objectMaskInfoSEIFileName()
   , m_targetDecLayerIdSet()

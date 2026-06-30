@@ -50,6 +50,10 @@
 #include "MCTS.h"
 #include "SEIColourTransform.h"
 #include "SEIFilmGrainSynthesizer.h"
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+#include "SEIGreenMetadataApply.h"
+class SEIGreenMetadataApply;
+#endif
 
 #include <deque>
 #include <optional>
@@ -88,6 +92,13 @@ struct Picture : public UnitArea
   bool              filmGrainAfterUpscale();
   PelUnitBuf        getDisplayBufFGUpscaled(const SPS& sps, const PPS& pps, int outputChoice, ChromaFormat format,
                                             int upscaleFilterForDisplay, int maxWidth, int maxHeight, bool wrap = false );
+
+#if GREEN_METADATA_SEI_ENABLED && GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
+  SEIGreenMetadataApply* m_greenMetadataCharacteristic;
+  PelStorage*            m_attenuatedBuf;
+  void              createGreenMetadataAMIProcessor(bool firstPictureInSequence, SEIGreenMetadataApply *greenMetadataCharacteristics, PelStorage* attenuatedBuf, int width, int height, ChromaFormat fmt, int bitDepth, bool fullRangeFlag);
+  PelUnitBuf        getDisplayBufAttenuated(PelStorage* attenuationMap);
+#endif
 
   SEIColourTransformApply* m_colourTranfParams;
   PelStorage*              m_invColourTransfBuf;

@@ -1910,97 +1910,95 @@ void SEIWriter::xWriteSEIGreenMetadataInfo(const SEIGreenMetadataInfo& sei)
 #if GREEN_METADATA_SEI_AMI_ENABLED_WG03_N01464
   case 2:
     {
-      CHECK(sei.m_greenMetadataAMIFlags > 63, "green_metadata_ami_flags shall be in the range 0-63");
-      xWriteCode(sei.m_greenMetadataAMIFlags, 8, "green_metadata_ami_flags");
+      CHECK(sei.m_greenMetadataAMIFlags > 63, "ami_flags shall be in the range 0-63");
+      xWriteCode(sei.m_greenMetadataAMIFlags, 8, "ami_flags");
       if ((sei.m_greenMetadataAMIFlags & GREEN_METADATA_AMI_FLAGS::CANCEL) != GREEN_METADATA_AMI_FLAGS::CANCEL)
       {
-        CHECK(sei.m_greenMetadataAMIDisplayModel > 3, "green_metadata_ami_display_model shall be in the range 0-3");
-        xWriteCode(sei.m_greenMetadataAMIDisplayModel, 4, "green_metadata_ami_display_model");
+        CHECK(sei.m_greenMetadataAMIDisplayModel > 3, "ami_display_model shall be in the range 0-3");
+        xWriteCode(sei.m_greenMetadataAMIDisplayModel, 4, "ami_display_model");
         if ((sei.m_greenMetadataAMIFlags & GREEN_METADATA_AMI_FLAGS::APPROX) == GREEN_METADATA_AMI_FLAGS::APPROX)
         {
           CHECK(sei.m_greenMetadataAMIApproximationModel > 4,
-                "green_metadata_ami_approximation_model shall be in the range 0-4");
-          xWriteCode(sei.m_greenMetadataAMIApproximationModel, 4, "green_metadata_ami_approximation_model");
+                "ami_approximation_model shall be in the range 0-4");
+          xWriteCode(sei.m_greenMetadataAMIApproximationModel, 4, "ami_approximation_model");
         }
-        CHECK(sei.m_greenMetadataAMIMapNumber > 7, "green_metadata_ami_map_number shall be in the range 0-7");
-        xWriteCode(sei.m_greenMetadataAMIMapNumber, 3, "green_metadata_ami_map_number");
+        CHECK(sei.m_greenMetadataAMIMapNumber > 7, "ami_map_number shall be in the range 0-7");
+        xWriteCode(sei.m_greenMetadataAMIMapNumber, 3, "ami_map_number");
 
         for (int i = 0; i < sei.m_greenMetadataAMIMapNumber; i++)
         {
-          CHECK(sei.m_greenMetadataAMILayerId[i] > 255, "green_metadata_ami_layer_id shall be in the range 0-255");
-          xWriteCode(sei.m_greenMetadataAMILayerId[i], 8, "green_metadata_ami_layer_id[i]");
-          CHECK(sei.m_greenMetadataAMIOlsNumber[i] > 15, "green_metadata_ami_ols_number shall be in the range 0-15");
-          xWriteCode(sei.m_greenMetadataAMIOlsNumber[i], 4, "green_metadata_ami_ols_number[i]");
+          CHECK(sei.m_greenMetadataAMILayerId[i] > 255, "ami_layer_id shall be in the range 0-255");
+          xWriteCode(sei.m_greenMetadataAMILayerId[i], 8, "ami_layer_id[i]");
+          CHECK(sei.m_greenMetadataAMIOlsNumber[i] > 15, "ami_ols_number shall be in the range 0-15");
+          xWriteCode(sei.m_greenMetadataAMIOlsNumber[i], 4, "ami_ols_number[i]");
           for (int j = 0; j < sei.m_greenMetadataAMIOlsNumber[i]; j++)
           {
-            CHECK(sei.m_greenMetadataAMIOlsId[i][j] > 255, "green_metadata_ami_ols_id shall be in the range 0-255");
-            xWriteCode(sei.m_greenMetadataAMIOlsId[i][j], 8, "green_metadata_ami_ols_id[i][j]");
+            CHECK(sei.m_greenMetadataAMIOlsId[i][j] > 255, "ami_ols_id shall be in the range 0-255");
+            xWriteCode(sei.m_greenMetadataAMIOlsId[i][j], 8, "ami_ols_id[i][j]");
           }
           CHECK(sei.m_greenMetadataAMIEnergyReductionRate[i] > 31,
-                "green_metadata_ami_energy_reduction_rate shall be in the range 0-31");
-          xWriteCode(sei.m_greenMetadataAMIEnergyReductionRate[i], 5, "green_metadata_ami_energy_reduction_rate[i]");
+                "ami_energy_reduction_rate shall be in the range 0-31");
+          xWriteCode(sei.m_greenMetadataAMIEnergyReductionRate[i], 5, "ami_energy_reduction_rate[i]");
           if ((sei.m_greenMetadataAMIFlags & GREEN_METADATA_AMI_FLAGS::QUALITY) == GREEN_METADATA_AMI_FLAGS::QUALITY)
           {
             CHECK(sei.m_greenMetadataAMIVideoQualityMetricType[i] > 3,
-                  "green_metadata_ami_video_quality_metric_type shall be in the range 0-3");
+                  "ami_video_quality_metric_type shall be in the range 0-3");
             xWriteCode(sei.m_greenMetadataAMIVideoQualityMetricType[i], 3,
-                       "green_metadata_ami_video_quality_metric_type[i]");
+                       "ami_video_quality_metric_type[i]");
             CHECK(sei.m_greenMetadataAMIVideoQualityLevel[i] > 65535,
-                  "green_metadata_ami_video_quality_level shall be in the range 0-65535");
-            xWriteCode(sei.m_greenMetadataAMIVideoQualityLevel[i], 16, "green_metadata_ami_video_quality_level[i]");
+                  "ami_video_quality_level shall be in the range 0-65535");
+            xWriteCode(sei.m_greenMetadataAMIVideoQualityLevel[i], 16, "ami_video_quality_level[i]");
           }
-          CHECK(sei.m_greenMetadataAMIMaxValue[i] > 255, "green_metadata_ami_max_value shall be in the range 0-255");
-          xWriteCode(sei.m_greenMetadataAMIMaxValue[i], 8, "green_metadata_ami_max_value[i]");
+          CHECK(sei.m_greenMetadataAMIMaxValue[i] > 255, "ami_max_value shall be in the range 0-255");
+          xWriteCode(sei.m_greenMetadataAMIMaxValue[i], 8, "ami_max_value[i]");
           if (((sei.m_greenMetadataAMIFlags & GREEN_METADATA_AMI_FLAGS::GLOBAL) != GREEN_METADATA_AMI_FLAGS::GLOBAL)
               || (i == 0))
           {
             CHECK(sei.m_greenMetadataAMIAttenuationUseIdc[i] > 2,
-                  "green_metadata_ami_attenuation_use_idc shall be in the range 0-2");
-            xWriteCode(sei.m_greenMetadataAMIAttenuationUseIdc[i], 4, "green_metadata_ami_attenuation_use_idc[i]");
+                  "ami_attenuation_use_idc shall be in the range 0-2");
+            xWriteCode(sei.m_greenMetadataAMIAttenuationUseIdc[i], 4, "ami_attenuation_use_idc[i]");
             CHECK(sei.m_greenMetadataAMIAttenuationCompIdc[i] > 6,
-                  "green_metadata_ami_attenuation_comp_idc shall be in the range 0-6");
-            xWriteCode(sei.m_greenMetadataAMIAttenuationCompIdc[i], 4, "green_metadata_ami_attenuation_comp_idc[i]");
+                  "ami_attenuation_comp_idc shall be in the range 0-6");
+            xWriteCode(sei.m_greenMetadataAMIAttenuationCompIdc[i], 4, "ami_attenuation_comp_idc[i]");
             if ((sei.m_greenMetadataAMIFlags & GREEN_METADATA_AMI_FLAGS::PREPROC) == GREEN_METADATA_AMI_FLAGS::PREPROC)
             {
-              // CHECK( std::is_same_v< decltype((sei.m_greenMetadataAMIPreprocessingFlag[i])), bool > == true,
-              //      "green_metadata_ami_preprocessing_flag shall be a boolean"); // CHD
-              xWriteFlag(sei.m_greenMetadataAMIPreprocessingFlag[i], "green_metadata_ami_preprocessing_flag[i]");
+              xWriteFlag(sei.m_greenMetadataAMIPreprocessingFlag[i], "ami_preprocessing_flag[i]");
               if (sei.m_greenMetadataAMIPreprocessingFlag[i])
               {
                 CHECK(sei.m_greenMetadataAMIPreprocessingTypeIdc[i] > 3,
-                      "green_metadata_ami_preprocessing_type shall be in the range 0-3");
+                      "ami_preprocessing_type shall be in the range 0-3");
                 xWriteCode(sei.m_greenMetadataAMIPreprocessingTypeIdc[i], 2,
-                           "green_metadata_ami_preprocessing_type_idc[i]");
+                           "ami_preprocessing_type_idc[i]");
               }
               CHECK(sei.m_greenMetadataAMIPreprocessingScaleIdc[i] > 2,
-                    "green_metadata_ami_preprocessing_scale_idc shall be in the range 0-2");
+                    "ami_preprocessing_scale_idc shall be in the range 0-2");
               xWriteCode(sei.m_greenMetadataAMIPreprocessingScaleIdc[i], 4,
-                         "green_metadata_ami_preprocessing_scale_idc[i]");
+                         "ami_preprocessing_scale_idc[i]");
             }
             if ((sei.m_greenMetadataAMIFlags & GREEN_METADATA_AMI_FLAGS::BACKLIGHT)
                 == GREEN_METADATA_AMI_FLAGS::BACKLIGHT)
             {
               CHECK(sei.m_greenMetadataAMIBacklightScalingIdc[i] > 1,
-                    "green_metadata_ami_backlight_scaling_idc shall be in the range 0-1");
+                    "ami_backlight_scaling_idc shall be in the range 0-1");
               xWriteCode(sei.m_greenMetadataAMIBacklightScalingIdc[i], 4,
-                         "green_metadata_ami_backlight_scaling_idc[i]");
+                         "ami_backlight_scaling_idc[i]");
             }
           }
         }
         if (sei.m_greenMetadataAMIMapNumber == 0)
         {
           CHECK(sei.m_greenMetadataAMIEnergyReductionRate[0] > 31,
-                "green_metadata_ami_energy_reduction_rate shall be in the range 0-31");
-          xWriteCode(sei.m_greenMetadataAMIEnergyReductionRate[0], 5, "green_metadata_ami_energy_reduction_rate[0]");
+                "ami_energy_reduction_rate shall be in the range 0-31");
+          xWriteCode(sei.m_greenMetadataAMIEnergyReductionRate[0], 5, "ami_energy_reduction_rate[0]");
           if ((sei.m_greenMetadataAMIFlags & GREEN_METADATA_AMI_FLAGS::QUALITY) == GREEN_METADATA_AMI_FLAGS::QUALITY)
           {
             CHECK(sei.m_greenMetadataAMIVideoQualityMetricType[0] > 3,
-                  "green_metadata_ami_video_quality_metric_type shall be in the range 0-3");
+                  "ami_video_quality_metric_type shall be in the range 0-3");
             xWriteCode(sei.m_greenMetadataAMIVideoQualityMetricType[0], 3,
-                       "green_metadata_ami_video_quality_metric_type[0]");
+                       "ami_video_quality_metric_type[0]");
             CHECK(sei.m_greenMetadataAMIVideoQualityLevel[0] > 65535,
-                  "green_metadata_ami_video_quality_level shall be in the range 0-65535");
-            xWriteCode(sei.m_greenMetadataAMIVideoQualityLevel[0], 16, "green_metadata_ami_video_quality_level[0]");
+                  "ami_video_quality_level shall be in the range 0-65535");
+            xWriteCode(sei.m_greenMetadataAMIVideoQualityLevel[0], 16, "ami_video_quality_level[0]");
           }
         }
       }
