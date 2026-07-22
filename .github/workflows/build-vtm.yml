@@ -7,10 +7,6 @@ on:
         description: 'CMake build type'
         required: false
         default: 'Release'
-      test_sequence_filename:
-        description: 'Test sequence filename to download from Google Drive (leave blank to skip)'
-        required: false
-        default: ''
 
 jobs:
   build:
@@ -41,21 +37,14 @@ jobs:
             bin/**/EncoderApp
             bin/**/DecoderApp
 
-      - name: Download test sequence from Google Drive
-        if: ${{ github.event.inputs.test_sequence_filename != '' }}
-        uses: tealrobotco/git-action-download-from-gdrive@main
-        with:
-          credentials: ${{ secrets.DRIVE_CREDENTIALS }}
-          folder-id: ${{ secrets.DRIVE_FOLDER_ID }}
-          filename: ${{ github.event.inputs.test_sequence_filename }}
-          output-path: test_sequences/${{ github.event.inputs.test_sequence_filename }}
-          max-attempts: 3
-          retry-delay: 5
-          verbose: true
+      - name: Download test sequences from Google Drive
+        run: |
+          pip install --quiet gdown
+          mkdir -p test_sequences
+          gdown --folder "https://drive.google.com/drive/folders/1UTcDr13oZb6qzkoiAdiqP_qhcN_qpQoe" -O test_sequences --remaining-ok
 
-      - name: Upload test sequence artifact
-        if: ${{ github.event.inputs.test_sequence_filename != '' }}
+      - name: Upload test sequences artifact
         uses: actions/upload-artifact@v4
         with:
-          name: test-sequence
+          name: test-sequences
           path: test_sequences/
