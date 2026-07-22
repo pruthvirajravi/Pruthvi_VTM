@@ -7,6 +7,14 @@ on:
         description: 'CMake build type'
         required: false
         default: 'Release'
+      qp:
+        description: 'Quantization parameter (QP) for the encode step'
+        required: false
+        default: '32'
+      frames:
+        description: 'Number of frames to encode (overrides per-sequence default for CI speed)'
+        required: false
+        default: '32'
 
 jobs:
   build:
@@ -48,3 +56,33 @@ jobs:
         with:
           name: test-sequences
           path: test_sequences/
+
+      - name: Run VTM Encoder (anchor Random Access, given QP)
+        run: |
+          QP="${{ github.event.inputs.qp || '32' }}"
+          FRAMES="${{ github.event.inputs.frames || '32' }}"
+          BIN=$(find bin -type f -name 'EncoderApp' | head -n1)
+          SEQ=$(find test_sequences -type f -iname '*.yuv' | head -n1)
+          mkdir -p encode_out
+          "$BIN" \
+            -c cfg/encoder_randomaccess_vtm.cfg \
+            -c cfg/per-sequence/Kimono.cfg \
+            -i "$SEQ" \
+            -b "encode_out/str_qp${QP}.bin" \
+            -o /dev/null \
+            -q "$QP" \
+            -f "$FRAMES" \
+            2>&1 | tee "encode_out/encode_qp${QP}.log"
+
+          {
+            echo "## VTM Encode Result — QP $QP"
+            echo '```'
+            grep -A4 "SUMMARY" "encode_out/encode_qp${QP}.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload encode log and bitstream
+        uses: actions/upload-artifact@v4
+        with:
+          name: encode-qp-${{ github.event.inputs.qp || '32' }}
+          path: encode_out/
