@@ -41,7 +41,7 @@ jobs:
         run: |
           pip install --quiet gdown
           mkdir -p test_sequences
-          gdown --folder "https://drive.google.com/drive/folders/1UTcDr13oZb6qzkoiAdiqP_qhcN_qpQoe" -O test_sequences --remaining-ok
+          gdown --folder "https://drive.google.com/drive/folders/1UTcDr13oZb6qzkoiAdiqP_qhcN_qpQoe" -O test_sequences
 
       - name: Upload test sequences artifact
         uses: actions/upload-artifact@v4
