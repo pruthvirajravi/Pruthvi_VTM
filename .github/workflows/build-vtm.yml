@@ -7,14 +7,14 @@ on:
         description: 'CMake build type'
         required: false
         default: 'Release'
-      qp:
-        description: 'Quantization parameter (QP) for the encode step'
-        required: false
-        default: '32'
       frames:
-        description: 'Number of frames to encode (overrides per-sequence default for CI speed)'
+        description: 'Frames to encode per run (blank = cfg default)'
         required: false
-        default: '32'
+        default: '17'
+      qps:
+        description: 'Space-separated QP list'
+        required: false
+        default: '22 27 32 37'
 
 jobs:
   build:
@@ -24,18 +24,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install build tools
-        run: sudo apt-get update && sudo apt-get install -y cmake build-essential
+        run: sudo apt-get update && sudo apt-get install -y cmake build-essential python3
 
       - name: Configure CMake
         run: |
-          mkdir -p build
-          cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release
+          mkdir -p build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type || 'Release' }}
 
       - name: Build VTM
-        run: |
-          cd build
-          make -j$(nproc)
+        run: cd build && make -j$(nproc)
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4
@@ -51,38 +48,60 @@ jobs:
           mkdir -p test_sequences
           gdown --folder "https://drive.google.com/drive/folders/1UTcDr13oZb6qzkoiAdiqP_qhcN_qpQoe" -O test_sequences
 
-      - name: Upload test sequences artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-sequences
-          path: test_sequences/
-
-      - name: Run VTM Encoder (anchor Random Access, given QP)
+      - name: Run VTM encodes (all sequences x all QPs)
         run: |
-          QP="${{ github.event.inputs.qp || '32' }}"
-          FRAMES="${{ github.event.inputs.frames || '32' }}"
-          BIN=$(find bin -type f -name 'EncoderApp' | head -n1)
-          SEQ=$(find test_sequences -type f -iname '*.yuv' | head -n1)
-          mkdir -p encode_out
-          "$BIN" \
-            -c cfg/encoder_randomaccess_vtm.cfg \
-            -c cfg/per-sequence/Kimono.cfg \
-            -i "$SEQ" \
-            -b "encode_out/str_qp${QP}.bin" \
-            -o /dev/null \
-            -q "$QP" \
-            -f "$FRAMES" \
-            2>&1 | tee "encode_out/encode_qp${QP}.log"
+          set -u
+          BIN="$(find bin -type f -name 'EncoderApp' | head -n1)"
+          FRAMES="${{ github.event.inputs.frames || '17' }}"
+          QPS="${{ github.event.inputs.qps || '22 27 32 37' }}"
+          mkdir -p encode_out logs
+          # label|cfg|yuv-glob  (yuv matched case-insensitively; missing ones are skipped)
+          MAP="
+          Kimono|cfg/per-sequence/Kimono.cfg|*Kimono*1920x1080*.yuv
+          ParkScene|cfg/per-sequence/ParkScene.cfg|*ParkScene*1920x1080*.yuv
+          RaceHorsesC|cfg/per-sequence/RaceHorsesC.cfg|*RaceHorses*832x480*.yuv
+          BQMall|cfg/per-sequence/BQMall.cfg|*BQMall*832x480*.yuv
+          RaceHorsesD|cfg/per-sequence/RaceHorses.cfg|*RaceHorses*416x240*.yuv
+          BQSquare|cfg/per-sequence/BQSquare.cfg|*BQSquare*416x240*.yuv
+          FourPeople|cfg/per-sequence/FourPeople.cfg|*FourPeople*1280x720*.yuv
+          Johnny|cfg/per-sequence/Johnny.cfg|*Johnny*1280x720*.yuv
+          "
+          echo "$MAP" | while IFS='|' read -r LABEL CFG GLOB; do
+            [ -z "$LABEL" ] && continue
+            [ -f "$CFG" ] || { echo "skip $LABEL: cfg missing"; continue; }
+            YUV="$(find test_sequences -type f -iname "$GLOB" | head -n1)"
+            if [ -z "$YUV" ]; then echo "skip $LABEL: yuv not found ($GLOB)"; continue; fi
+            for QP in $QPS; do
+              LOG="logs/${LABEL}_qp${QP}.log"
+              echo "=== $LABEL QP $QP :: $YUV ==="
+              FRAMEARG=""; [ -n "$FRAMES" ] && FRAMEARG="-f $FRAMES"
+              "$BIN" \
+                -c cfg/encoder_randomaccess_vtm.cfg \
+                -c "$CFG" \
+                -i "$YUV" \
+                -b "encode_out/${LABEL}_qp${QP}.bin" \
+                -o /dev/null \
+                -q "$QP" $FRAMEARG \
+                2>&1 | tee "$LOG" || echo "non-zero exit for $LABEL qp$QP (continuing)"
+            done
+          done
+          echo "Done. Logs:"; ls -la logs || true
 
-          {
-            echo "## VTM Encode Result — QP $QP"
-            echo '```'
-            grep -A4 "SUMMARY" "encode_out/encode_qp${QP}.log"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Parse logs to CSV
+        run: python3 scripts/parse_vtm_logs.py logs encode_out/results.csv
 
-      - name: Upload encode log and bitstream
+      - name: Upload encode logs (ALL raw logs)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: encode-qp-${{ github.event.inputs.qp || '32' }}
-          path: encode_out/
+          name: vtm-logs
+          path: logs/
+
+      - name: Upload results CSV and bitstreams
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vtm-results
+          path: |
+            encode_out/results.csv
+            encode_out/*.bin
