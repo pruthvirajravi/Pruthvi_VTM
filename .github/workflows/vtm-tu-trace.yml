@@ -1,13 +1,9 @@
 # Phase 1 -- VTM coded-TU workload trace (self-contained; tools embedded as base64).
 # PARAMETERIZED by enc_cfg (AI/RA/LDB/LDP). Decoder-side capture -> final coded TUs.
-#
-# FIX (concurrency/Drive-quota): sequences are downloaded ONCE in a cached prep
-# job and restored from cache by every trace job -- instead of 32x gdown per run.
-# Cuts Google-Drive load ~32x and lets repeated/parallel runs reuse one download.
+# Sequences pulled ONCE into a cached prep job (fresh-quota Drive) and reused by
+# every trace job -- no repeated Google-Drive hits.
 name: VTM TU Trace (Phase 1)
-concurrency:
-  group: vtm-tu-trace
-  cancel-in-progress: false
+run-name: 'Phase 1 TU Trace -- ${{ inputs.config_tag }}  (cfg ${{ inputs.enc_cfg }})'
 on:
   workflow_dispatch:
     inputs:
@@ -16,7 +12,7 @@ on:
         required: false
         default: 'encoder_randomaccess_vtm.cfg'
       config_tag:
-        description: 'Short tag recorded in the trace (AI/RA/LDB/LDP)'
+        description: 'Short tag recorded in the trace + run name (AI/RA/LDB/LDP)'
         required: false
         default: 'RA'
       frames:
@@ -57,19 +53,24 @@ jobs:
         uses: actions/cache@v4
         with:
           path: test_sequences
-          key: vtm-test-sequences-v1
-      - name: Download sequences ONCE (only on cache miss, with retry)
+          key: vtm-test-sequences-v2
+      - name: Download sequences ONCE (cache miss only, retry, verify complete)
         if: steps.seqcache.outputs.cache-hit != 'true'
         run: |
           pip install --quiet gdown
-          mkdir -p test_sequences
+          rm -rf test_sequences && mkdir -p test_sequences
           ok=0
           for i in 1 2 3 4 5 6; do
-            if gdown --folder "https://drive.google.com/drive/folders/1UTcDr13oZb6qzkoiAdiqP_qhcN_qpQoe" -O test_sequences; then ok=1; break; fi
-            echo "gdown attempt $i failed (Drive rate/quota) -- sleeping 60s"; sleep 60
+            gdown --folder "https://drive.google.com/drive/folders/17rwtLY3f49dQRy2CT2Jl1w5eTJdc3TvK" -O test_sequences || true
+            n=$(find test_sequences -type f -iname '*.yuv' | wc -l)
+            if [ "$n" -ge 8 ]; then ok=1; echo "got $n sequences"; break; fi
+            echo "attempt $i: only $n/8 sequences (Drive rate/quota or upload incomplete) -- sleeping 60s"
+            sleep 60
           done
-          if [ "$ok" != "1" ]; then echo "gdown failed after retries (Drive quota likely exhausted; retry after ~24h)"; exit 1; fi
-          echo "downloaded:"; find test_sequences -type f | wc -l
+          if [ "$ok" != "1" ]; then
+            echo "FAILED: fewer than 8 sequences -- NOT caching a partial set"; rm -rf test_sequences; exit 1
+          fi
+          find test_sequences -type f -iname '*.yuv' -printf '%f\n'
   trace:
     needs: [build, prep]
     runs-on: ubuntu-latest
@@ -86,14 +87,13 @@ jobs:
           name: vtm-binaries
           path: bin
       - name: Restore sequences from cache (no Drive access)
-        id: seqcache
         uses: actions/cache@v4
         with:
           path: test_sequences
-          key: vtm-test-sequences-v1
+          key: vtm-test-sequences-v2
       - name: Verify sequences present
         run: |
-          if [ ! -d test_sequences ] || [ -z "$(find test_sequences -type f -name '*.yuv' 2>/dev/null)" ]; then
+          if [ -z "$(find test_sequences -type f -iname '*.yuv' 2>/dev/null)" ]; then
             echo "sequence cache empty -- prep did not populate it"; exit 1
           fi
       - name: Encode -> .bin (trace OFF)
@@ -154,11 +154,11 @@ jobs:
         run: |
           python3 tools/merge_tu_trace.py raw out --config "${{ github.event.inputs.config_tag || 'RA' }}"
           echo "----- tu_summary.txt -----"; cat out/tu_summary.txt
-      - name: Upload consolidated workload
+      - name: Upload consolidated workload (tagged by config)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tu-traces
+          name: tu-traces-${{ github.event.inputs.config_tag || 'RA' }}
           path: |
             out/tu_trace.csv
             out/tu_distribution.csv
