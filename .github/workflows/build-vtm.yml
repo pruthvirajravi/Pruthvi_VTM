@@ -38,15 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - {label: Kimono,      cfg: Kimono.cfg,      glob: '*Kimono*1920x1080*.yuv'}
-          - {label: ParkScene,   cfg: ParkScene.cfg,   glob: '*ParkScene*1920x1080*.yuv'}
-          - {label: RaceHorsesC, cfg: RaceHorsesC.cfg, glob: '*RaceHorses*832x480*.yuv'}
-          - {label: BQMall,      cfg: BQMall.cfg,      glob: '*BQMall*832x480*.yuv'}
-          - {label: RaceHorsesD, cfg: RaceHorses.cfg,  glob: '*RaceHorses*416x240*.yuv'}
-          - {label: BQSquare,    cfg: BQSquare.cfg,    glob: '*BQSquare*416x240*.yuv'}
-          - {label: FourPeople,  cfg: FourPeople.cfg,  glob: '*FourPeople*1280x720*.yuv'}
-          - {label: Johnny,      cfg: Johnny.cfg,      glob: '*Johnny*1280x720*.yuv'}
+        sequence: [Kimono, ParkScene, RaceHorsesC, BQMall, RaceHorsesD, BQSquare, FourPeople, Johnny]
         qp: ['22', '27', '32', '37']
     steps:
       - name: Checkout code
@@ -61,18 +53,29 @@ jobs:
           pip install --quiet gdown
           mkdir -p test_sequences
           gdown --folder "https://drive.google.com/drive/folders/1UTcDr13oZb6qzkoiAdiqP_qhcN_qpQoe" -O test_sequences
-      - name: Encode ${{ matrix.label }} QP ${{ matrix.qp }}
+      - name: Encode ${{ matrix.sequence }} QP ${{ matrix.qp }}
         run: |
           set -u
           BIN="$(find bin -type f -name 'EncoderApp' | head -n1)"
           chmod +x "$BIN"
           FRAMES="${{ github.event.inputs.frames || '17' }}"
-          LABEL="${{ matrix.label }}"
+          LABEL="${{ matrix.sequence }}"
           QP="${{ matrix.qp }}"
-          CFG="cfg/per-sequence/${{ matrix.cfg }}"
+          case "$LABEL" in
+            Kimono)      CFG=Kimono.cfg;      GLOB='*Kimono*1920x1080*.yuv' ;;
+            ParkScene)   CFG=ParkScene.cfg;   GLOB='*ParkScene*1920x1080*.yuv' ;;
+            RaceHorsesC) CFG=RaceHorsesC.cfg; GLOB='*RaceHorses*832x480*.yuv' ;;
+            BQMall)      CFG=BQMall.cfg;      GLOB='*BQMall*832x480*.yuv' ;;
+            RaceHorsesD) CFG=RaceHorses.cfg;  GLOB='*RaceHorses*416x240*.yuv' ;;
+            BQSquare)    CFG=BQSquare.cfg;    GLOB='*BQSquare*416x240*.yuv' ;;
+            FourPeople)  CFG=FourPeople.cfg;  GLOB='*FourPeople*1280x720*.yuv' ;;
+            Johnny)      CFG=Johnny.cfg;      GLOB='*Johnny*1280x720*.yuv' ;;
+            *) echo "unknown sequence $LABEL"; exit 1 ;;
+          esac
+          CFG="cfg/per-sequence/$CFG"
           mkdir -p encode_out logs
-          YUV="$(find test_sequences -type f -iname "${{ matrix.glob }}" | head -n1)"
-          if [ -z "$YUV" ]; then echo "YUV not found for $LABEL (${{ matrix.glob }})"; exit 0; fi
+          YUV="$(find test_sequences -type f -iname "$GLOB" | head -n1)"
+          if [ -z "$YUV" ]; then echo "YUV not found for $LABEL ($GLOB)"; exit 0; fi
           LOG="logs/${LABEL}_qp${QP}.log"
           echo "=== $LABEL QP $QP :: $YUV ==="
           FRAMEARG=""; [ -n "$FRAMES" ] && FRAMEARG="-f $FRAMES"
@@ -85,18 +88,18 @@ jobs:
             -q "$QP" $FRAMEARG \
             2>&1 | tee "$LOG" || echo "non-zero exit for $LABEL qp$QP (continuing)"
       - name: Parse this log to CSV
-        run: python3 scripts/parse_vtm_logs.py logs encode_out/results_${{ matrix.label }}_qp${{ matrix.qp }}.csv
+        run: python3 scripts/parse_vtm_logs.py logs encode_out/results_${{ matrix.sequence }}_qp${{ matrix.qp }}.csv
       - name: Upload log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: log-${{ matrix.label }}-qp${{ matrix.qp }}
+          name: log-${{ matrix.sequence }}-qp${{ matrix.qp }}
           path: logs/
       - name: Upload partial CSV
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: csv-${{ matrix.label }}-qp${{ matrix.qp }}
+          name: csv-${{ matrix.sequence }}-qp${{ matrix.qp }}
           path: encode_out/results_*.csv
 
   merge:
