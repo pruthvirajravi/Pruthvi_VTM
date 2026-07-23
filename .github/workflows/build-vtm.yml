@@ -11,10 +11,6 @@ on:
         description: 'Frames to encode per run (blank = cfg default)'
         required: false
         default: '17'
-      qps:
-        description: 'Space-separated QP list'
-        required: false
-        default: '22 27 32 37'
 
 jobs:
   build:
@@ -22,86 +18,123 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Install build tools
-        run: sudo apt-get update && sudo apt-get install -y cmake build-essential python3
-
+        run: sudo apt-get update && sudo apt-get install -y cmake build-essential
       - name: Configure CMake
         run: |
           mkdir -p build && cd build
           cmake .. -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type || 'Release' }}
-
       - name: Build VTM
         run: cd build && make -j$(nproc)
-
-      - name: Upload binaries
+      - name: Upload encoder binary
         uses: actions/upload-artifact@v4
         with:
-          name: vtm-binaries
-          path: |
-            bin/**/EncoderApp
-            bin/**/DecoderApp
+          name: vtm-binary
+          path: bin/**/EncoderApp
 
+  encode:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: Kimono,      cfg: Kimono.cfg,      glob: '*Kimono*1920x1080*.yuv'}
+          - {label: ParkScene,   cfg: ParkScene.cfg,   glob: '*ParkScene*1920x1080*.yuv'}
+          - {label: RaceHorsesC, cfg: RaceHorsesC.cfg, glob: '*RaceHorses*832x480*.yuv'}
+          - {label: BQMall,      cfg: BQMall.cfg,      glob: '*BQMall*832x480*.yuv'}
+          - {label: RaceHorsesD, cfg: RaceHorses.cfg,  glob: '*RaceHorses*416x240*.yuv'}
+          - {label: BQSquare,    cfg: BQSquare.cfg,    glob: '*BQSquare*416x240*.yuv'}
+          - {label: FourPeople,  cfg: FourPeople.cfg,  glob: '*FourPeople*1280x720*.yuv'}
+          - {label: Johnny,      cfg: Johnny.cfg,      glob: '*Johnny*1280x720*.yuv'}
+        qp: ['22', '27', '32', '37']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Download encoder binary
+        uses: actions/download-artifact@v4
+        with:
+          name: vtm-binary
+          path: bin
       - name: Download test sequences from Google Drive
         run: |
           pip install --quiet gdown
           mkdir -p test_sequences
           gdown --folder "https://drive.google.com/drive/folders/1UTcDr13oZb6qzkoiAdiqP_qhcN_qpQoe" -O test_sequences
-
-      - name: Run VTM encodes (all sequences x all QPs)
+      - name: Encode ${{ matrix.label }} QP ${{ matrix.qp }}
         run: |
           set -u
           BIN="$(find bin -type f -name 'EncoderApp' | head -n1)"
+          chmod +x "$BIN"
           FRAMES="${{ github.event.inputs.frames || '17' }}"
-          QPS="${{ github.event.inputs.qps || '22 27 32 37' }}"
+          LABEL="${{ matrix.label }}"
+          QP="${{ matrix.qp }}"
+          CFG="cfg/per-sequence/${{ matrix.cfg }}"
           mkdir -p encode_out logs
-          # label|cfg|yuv-glob  (yuv matched case-insensitively; missing ones are skipped)
-          MAP="
-          Kimono|cfg/per-sequence/Kimono.cfg|*Kimono*1920x1080*.yuv
-          ParkScene|cfg/per-sequence/ParkScene.cfg|*ParkScene*1920x1080*.yuv
-          RaceHorsesC|cfg/per-sequence/RaceHorsesC.cfg|*RaceHorses*832x480*.yuv
-          BQMall|cfg/per-sequence/BQMall.cfg|*BQMall*832x480*.yuv
-          RaceHorsesD|cfg/per-sequence/RaceHorses.cfg|*RaceHorses*416x240*.yuv
-          BQSquare|cfg/per-sequence/BQSquare.cfg|*BQSquare*416x240*.yuv
-          FourPeople|cfg/per-sequence/FourPeople.cfg|*FourPeople*1280x720*.yuv
-          Johnny|cfg/per-sequence/Johnny.cfg|*Johnny*1280x720*.yuv
-          "
-          echo "$MAP" | while IFS='|' read -r LABEL CFG GLOB; do
-            [ -z "$LABEL" ] && continue
-            [ -f "$CFG" ] || { echo "skip $LABEL: cfg missing"; continue; }
-            YUV="$(find test_sequences -type f -iname "$GLOB" | head -n1)"
-            if [ -z "$YUV" ]; then echo "skip $LABEL: yuv not found ($GLOB)"; continue; fi
-            for QP in $QPS; do
-              LOG="logs/${LABEL}_qp${QP}.log"
-              echo "=== $LABEL QP $QP :: $YUV ==="
-              FRAMEARG=""; [ -n "$FRAMES" ] && FRAMEARG="-f $FRAMES"
-              "$BIN" \
-                -c cfg/encoder_randomaccess_vtm.cfg \
-                -c "$CFG" \
-                -i "$YUV" \
-                -b "encode_out/${LABEL}_qp${QP}.bin" \
-                -o /dev/null \
-                -q "$QP" $FRAMEARG \
-                2>&1 | tee "$LOG" || echo "non-zero exit for $LABEL qp$QP (continuing)"
-            done
-          done
-          echo "Done. Logs:"; ls -la logs || true
-
-      - name: Parse logs to CSV
-        run: python3 scripts/parse_vtm_logs.py logs encode_out/results.csv
-
-      - name: Upload encode logs (ALL raw logs)
+          YUV="$(find test_sequences -type f -iname "${{ matrix.glob }}" | head -n1)"
+          if [ -z "$YUV" ]; then echo "YUV not found for $LABEL (${{ matrix.glob }})"; exit 0; fi
+          LOG="logs/${LABEL}_qp${QP}.log"
+          echo "=== $LABEL QP $QP :: $YUV ==="
+          FRAMEARG=""; [ -n "$FRAMES" ] && FRAMEARG="-f $FRAMES"
+          "$BIN" \
+            -c cfg/encoder_randomaccess_vtm.cfg \
+            -c "$CFG" \
+            -i "$YUV" \
+            -b "encode_out/${LABEL}_qp${QP}.bin" \
+            -o /dev/null \
+            -q "$QP" $FRAMEARG \
+            2>&1 | tee "$LOG" || echo "non-zero exit for $LABEL qp$QP (continuing)"
+      - name: Parse this log to CSV
+        run: python3 scripts/parse_vtm_logs.py logs encode_out/results_${{ matrix.label }}_qp${{ matrix.qp }}.csv
+      - name: Upload log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vtm-logs
+          name: log-${{ matrix.label }}-qp${{ matrix.qp }}
           path: logs/
+      - name: Upload partial CSV
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: csv-${{ matrix.label }}-qp${{ matrix.qp }}
+          path: encode_out/results_*.csv
 
-      - name: Upload results CSV and bitstreams
+  merge:
+    needs: encode
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all partial CSVs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: csv-*
+          path: parts
+          merge-multiple: true
+      - name: Download all logs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: log-*
+          path: all_logs
+          merge-multiple: true
+      - name: Combine CSVs
+        run: |
+          mkdir -p final
+          first=1
+          for f in $(find parts -name 'results_*.csv' | sort); do
+            if [ $first -eq 1 ]; then cat "$f" > final/results.csv; first=0;
+            else tail -n +2 "$f" >> final/results.csv; fi
+          done
+          echo "Combined rows:"; wc -l final/results.csv || true
+          cat final/results.csv || true
+      - name: Upload combined results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: vtm-results
-          path: |
-            encode_out/results.csv
-            encode_out/*.bin
+          path: final/results.csv
+      - name: Upload all logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vtm-logs
+          path: all_logs/
