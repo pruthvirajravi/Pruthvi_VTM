@@ -1,38 +1,40 @@
-# Phase 1 -- VTM coded-TU workload trace  (self-contained; tools embedded as base64).
-# Aligned to build-vtm.yml: same repo as VTM source, same 8-seq x QP matrix, RA config,
-# gdown sequences. Captures per-TU transform workload via decoder-side instrumentation
-# (hook fires only when VTM_TU_TRACE is set -> decode step only -> final coded TUs).
+# Phase 1 -- VTM coded-TU workload trace (self-contained; tools embedded as base64).
+# PARAMETERIZED: enc_cfg selects the JVET coding configuration so the same
+# workflow traces AI / RA / LDB / LDP. Decoder-side capture -> final coded TUs.
 name: VTM TU Trace (Phase 1)
 on:
   workflow_dispatch:
     inputs:
-      frames:
-        description: 'Frames per clip (RD run used 30)'
+      enc_cfg:
+        description: 'Encoder cfg under cfg/ (e.g. encoder_intra_vtm.cfg)'
         required: false
-        default: '30'
+        default: 'encoder_randomaccess_vtm.cfg'
       config_tag:
-        description: 'Label recorded in the merged trace (RA/AI)'
+        description: 'Short tag recorded in the trace (AI/RA/LDB/LDP)'
         required: false
         default: 'RA'
+      frames:
+        description: 'Frames per clip'
+        required: false
+        default: '30'
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       - name: Install build tools
         run: sudo apt-get update && sudo apt-get install -y cmake build-essential
       - name: Write instrumentation tool
         run: |
           mkdir -p tools
           echo IyEvdXNyL2Jpbi9lbnYgcHl0aG9uMwojIGluamVjdF90dV90cmFjZS5weSAgLS0gIFBoYXNlIDEgVFUtd29ya2xvYWQgaW5zdHJ1bWVudGF0aW9uIGZvciBWVE0uCiMKIyBJbmplY3RzIGEgcnVudGltZS1nYXRlZCwgcGVyLVRVIHRyYW5zZm9ybSB0cmFjZSBkdW1wIGludG8gVlRNJ3MgVHJRdWFudC5jcHAsCiMgcmlnaHQgYWZ0ZXIgZXZlcnkgYGdldFRyVHlwZXModHUsIGNvbXBJRCwgdHJUeXBlSG9yLCB0clR5cGVWZXIpYCBjYWxsLgojCiMgV0hZIFRISVMgUE9JTlQ6IGdldFRyVHlwZXMgcmVzb2x2ZXMgdGhlIHBlci1heGlzIHRyYW5zZm9ybSBrZXJuZWwKIyAoRENULUlJIC8gRFNULVZJSSAvIERDVC1WSUlJKSBmb3IgYSBUVS4gSXQgaXMgY2FsbGVkIGJ5IGJvdGggdGhlIGZvcndhcmQKIyAoeFQsIGVuY29kZXIpIGFuZCBpbnZlcnNlICh4SVQsIGRlY29kZXIpIHRyYW5zZm9ybSBwYXRocy4gVGhlIGluamVjdGVkIGR1bXAKIyBvbmx5IHdyaXRlcyB3aGVuIHRoZSBlbnYgdmFyIFZUTV9UVV9UUkFDRSBpcyBzZXQgdG8gYW4gb3V0cHV0IHBhdGggLS0gd2Ugc2V0CiMgaXQgT05MWSBmb3IgdGhlIERFQ09ERVIgcnVuLCBzbzoKIyAgICogZW5jb2RlciBydW4gIChlbnYgdW5zZXQpIC0+IG5vIG91dHB1dCwgemVybyBSRE8tdHJpYWwgY29udGFtaW5hdGlvbgojICAgKiBkZWNvZGVyIHJ1biAgKGVudiBzZXQpICAgLT4gZXhhY3RseSBvbmUgcm93IHBlciBGSU5BTCBjb2RlZCBUVSB0aGF0CiMgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBhY3R1YWxseSByZXF1aXJlcyBhIHRyYW5zZm9ybSAoQ0JGPTEpLAojICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaS5lLiB0aGUgdHJ1ZSB0cmFuc2Zvcm0tZW5naW5lIHdvcmtsb2FkLgojIFRoaXMgbWF0Y2hlcyB0aGUgbWFudXNjcmlwdCdzIGNvZGVkLVRVIGNoYXJhY3RlcmlzYXRpb24gbWV0aG9kb2xvZ3kKIyAofjEuODdNIGpvYnMgb3ZlciB0aGUgQ1RDIGNvcnB1cyksIG5vdCB0aGUgZmFyIGxhcmdlciBSRE8tdHJpYWwgY291bnQuCiMKIyBUaGUgaG9vayBpcyBpZGVtcG90ZW50IChndWFyZGVkIGJ5IGEgbWFya2VyKSBhbmQgaGFzIHplcm8gZWZmZWN0IG9uIGEgc3RvY2sKIyBidWlsZCB3aGVuIFZUTV9UVV9UUkFDRSBpcyB1bnNldCwgc28gaXQgaXMgc2FmZSB0byBsZWF2ZSBhcHBsaWVkLgojCiMgVXNhZ2U6ICBweXRob24zIGluamVjdF90dV90cmFjZS5weSA8cGF0aC10by1WVE0tY2hlY2tvdXQ+CiMgRXhpdCAwIG9uIHN1Y2Nlc3MgKG9yIGFscmVhZHktYXBwbGllZCksIG5vbi16ZXJvIGlmIHRoZSBhbmNob3IgaXMgbm90IGZvdW5kLgoKaW1wb3J0IG9zCmltcG9ydCByZQppbXBvcnQgc3lzCgpNQVJLRVIgPSAiX19WVE1fVFVfVFJBQ0VfXyIKCiMgUnVudGltZS1nYXRlZCBkdW1wLiBVc2VzIHR1LmJsb2Nrc1tjb21wSURdIGZvciBnZW9tZXRyeSBzbyBpdCBpcyBpZGVudGljYWwKIyBvbiB0aGUgZm9yd2FyZCBhbmQgaW52ZXJzZSBwYXRocyAoeElUIGhhcyBubyBsb2NhbCB3aWR0aC9oZWlnaHQgaW4gc2NvcGUpLgpIT09LID0gKAogICAgIiAgICAvKiB7bWFya2VyfSAqLyB7eyBjb25zdCBjaGFyKiBfX3RwID0gZ2V0ZW52KFwiVlRNX1RVX1RSQUNFXCIpOyAiCiAgICAiaWYoX190cCl7eyBzdGF0aWMgRklMRSogX190Zj1udWxscHRyOyBpZighX190ZikgX190Zj1mb3BlbihfX3RwLFwiYVwiKTsgIgogICAgImlmKF9fdGYpe3sgY29uc3QgQ29tcEFyZWEmIF9fY2EgPSB0dS5ibG9ja3NbY29tcElEXTsgIgogICAgImZwcmludGYoX190ZixcIiVkLCVkLCVkLCVkLCVkLCVkLCVkLCVkXFxuXCIsIgogICAgIihpbnQpdHUuY3UtPnNsaWNlLT5nZXRQT0MoKSwoaW50KWNvbXBJRCwoaW50KV9fY2EueCwoaW50KV9fY2EueSwiCiAgICAiKGludClfX2NhLndpZHRoLChpbnQpX19jYS5oZWlnaHQsKGludCl0clR5cGVIb3IsKGludCl0clR5cGVWZXIpOyB9fSB9fSB9fVxuIgopLmZvcm1hdChtYXJrZXI9TUFSS0VSKQoKIyBNYXRjaGVzIGEgZ2V0VHJUeXBlcyBDQUxMICh0cmFpbGluZyAnOycpLCBub3QgdGhlIGZ1bmN0aW9uIGRlZmluaXRpb24KIyAod2hvc2Ugc2lnbmF0dXJlIHJlYWRzIGBpbnQgJnRyVHlwZUhvcmApLiBUb2xlcmFudCBvZiB3aGl0ZXNwYWNlLgpBTkNIT1IgPSByZS5jb21waWxlKAogICAgciJnZXRUclR5cGVzXHMqXChccyp0dVxzKixccypjb21wSURccyosXHMqdHJUeXBlSG9yXHMqLFxzKnRyVHlwZVZlclxzKlwpXHMqO1teXG5dKlxuIgopCgoKZGVmIGZpbmRfdHJxdWFudChyb290KToKICAgIGNhbmRpZGF0ZXMgPSBbCiAgICAgICAgb3MucGF0aC5qb2luKHJvb3QsICJzb3VyY2UiLCAiTGliIiwgIkNvbW1vbkxpYiIsICJUclF1YW50LmNwcCIpLAogICAgICAgIG9zLnBhdGguam9pbihyb290LCAiTGliIiwgIkNvbW1vbkxpYiIsICJUclF1YW50LmNwcCIpLAogICAgXQogICAgZm9yIGMgaW4gY2FuZGlkYXRlczoKICAgICAgICBpZiBvcy5wYXRoLmlzZmlsZShjKToKICAgICAgICAgICAgcmV0dXJuIGMKICAgICMgbGFzdCByZXNvcnQ6IHNlYXJjaAogICAgZm9yIGRwLCBfLCBmbnMgaW4gb3Mud2Fsayhyb290KToKICAgICAgICBpZiAiVHJRdWFudC5jcHAiIGluIGZuczoKICAgICAgICAgICAgcmV0dXJuIG9zLnBhdGguam9pbihkcCwgIlRyUXVhbnQuY3BwIikKICAgIHJldHVybiBOb25lCgoKZGVmIGVuc3VyZV9pbmNsdWRlcyhzcmMpOgogICAgaWYgIiNpbmNsdWRlIDxjc3RkaW8+IiBpbiBzcmMgYW5kICIjaW5jbHVkZSA8Y3N0ZGxpYj4iIGluIHNyYzoKICAgICAgICByZXR1cm4gc3JjCiAgICAjIGluc2VydCBhZnRlciB0aGUgZmlyc3QgI2luY2x1ZGUgbGluZQogICAgbSA9IHJlLnNlYXJjaChyIl4jaW5jbHVkZVteXG5dKlxuIiwgc3JjLCByZS5NKQogICAgaWYgbm90IG06CiAgICAgICAgcmV0dXJuICIjaW5jbHVkZSA8Y3N0ZGlvPlxuI2luY2x1ZGUgPGNzdGRsaWI+XG4iICsgc3JjCiAgICBpbnMgPSAiIgogICAgaWYgIiNpbmNsdWRlIDxjc3RkaW8+IiBub3QgaW4gc3JjOgogICAgICAgIGlucyArPSAiI2luY2x1ZGUgPGNzdGRpbz5cbiIKICAgIGlmICIjaW5jbHVkZSA8Y3N0ZGxpYj4iIG5vdCBpbiBzcmM6CiAgICAgICAgaW5zICs9ICIjaW5jbHVkZSA8Y3N0ZGxpYj5cbiIKICAgIGkgPSBtLmVuZCgpCiAgICByZXR1cm4gc3JjWzppXSArIGlucyArIHNyY1tpOl0KCgpkZWYgbWFpbigpOgogICAgaWYgbGVuKHN5cy5hcmd2KSAhPSAyOgogICAgICAgIHByaW50KCJ1c2FnZTogaW5qZWN0X3R1X3RyYWNlLnB5IDxWVE0tY2hlY2tvdXQtcm9vdD4iLCBmaWxlPXN5cy5zdGRlcnIpCiAgICAgICAgcmV0dXJuIDIKICAgIHJvb3QgPSBzeXMuYXJndlsxXQogICAgcGF0aCA9IGZpbmRfdHJxdWFudChyb290KQogICAgaWYgbm90IHBhdGg6CiAgICAgICAgcHJpbnQoIkVSUk9SOiBUclF1YW50LmNwcCBub3QgZm91bmQgdW5kZXIgJXMiICUgcm9vdCwgZmlsZT1zeXMuc3RkZXJyKQogICAgICAgIHJldHVybiAzCgogICAgd2l0aCBvcGVuKHBhdGgsICJyIiwgZW5jb2Rpbmc9InV0Zi04IiwgZXJyb3JzPSJyZXBsYWNlIikgYXMgZjoKICAgICAgICBzcmMgPSBmLnJlYWQoKQoKICAgIGlmIE1BUktFUiBpbiBzcmM6CiAgICAgICAgcHJpbnQoImFscmVhZHkgaW5zdHJ1bWVudGVkOiAlcyIgJSBwYXRoKQogICAgICAgIHJldHVybiAwCgogICAgbWF0Y2hlcyA9IGxpc3QoQU5DSE9SLmZpbmRpdGVyKHNyYykpCiAgICBpZiBub3QgbWF0Y2hlczoKICAgICAgICBwcmludCgiRVJST1I6IGdldFRyVHlwZXModHUsY29tcElELHRyVHlwZUhvcix0clR5cGVWZXIpIGFuY2hvciBub3QgZm91bmQgaW4gJXMiCiAgICAgICAgICAgICAgJSBwYXRoLCBmaWxlPXN5cy5zdGRlcnIpCiAgICAgICAgcHJpbnQoIiAgICAgICBWVE0gbGF5b3V0IG1heSBkaWZmZXIgLS0gaW5zcGVjdCBUclF1YW50LmNwcCBhbmQgYWRqdXN0IEFOQ0hPUi4iLAogICAgICAgICAgICAgIGZpbGU9c3lzLnN0ZGVycikKICAgICAgICByZXR1cm4gNAoKICAgICMgSW5zZXJ0IGhvb2sgYWZ0ZXIgZWFjaCBhbmNob3IsIGJhY2stdG8tZnJvbnQgdG8ga2VlcCBvZmZzZXRzIHZhbGlkLgogICAgb3V0ID0gc3JjCiAgICBmb3IgbSBpbiByZXZlcnNlZChtYXRjaGVzKToKICAgICAgICBvdXQgPSBvdXRbOm0uZW5kKCldICsgSE9PSyArIG91dFttLmVuZCgpOl0KCiAgICBvdXQgPSBlbnN1cmVfaW5jbHVkZXMob3V0KQoKICAgIHdpdGggb3BlbihwYXRoLCAidyIsIGVuY29kaW5nPSJ1dGYtOCIpIGFzIGY6CiAgICAgICAgZi53cml0ZShvdXQpCgogICAgcHJpbnQoImluc3RydW1lbnRlZCAlZCBjYWxsIHNpdGUocykgaW4gJXMiICUgKGxlbihtYXRjaGVzKSwgcGF0aCkpCiAgICByZXR1cm4gMAoKCmlmIF9fbmFtZV9fID09ICJfX21haW5fXyI6CiAgICBzeXMuZXhpdChtYWluKCkpCg== | base64 -d > tools/inject_tu_trace.py
-      - name: Instrument TrQuant.cpp (runtime-gated TU dump)
+      - name: Instrument TrQuant.cpp
         run: python3 tools/inject_tu_trace.py .
       - name: Configure CMake
         run: |
           mkdir -p build && cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release
-      - name: Build VTM (Encoder + Decoder)
+      - name: Build Encoder + Decoder
         run: cd build && make -j"$(nproc)" EncoderApp DecoderApp
       - name: Upload binaries
         uses: actions/upload-artifact@v4
@@ -51,23 +53,23 @@ jobs:
         sequence: [Kimono, ParkScene, RaceHorsesC, BQMall, RaceHorsesD, BQSquare, FourPeople, Johnny]
         qp: ['22', '27', '32', '37']
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       - name: Download binaries
         uses: actions/download-artifact@v4
         with:
           name: vtm-binaries
           path: bin
-      - name: Download test sequences from Google Drive
+      - name: Download sequences
         run: |
           pip install --quiet gdown
           mkdir -p test_sequences
           gdown --folder "https://drive.google.com/drive/folders/1UTcDr13oZb6qzkoiAdiqP_qhcN_qpQoe" -O test_sequences
-      - name: Encode to .bin (trace OFF)
+      - name: Encode -> .bin (trace OFF)
         run: |
           set -u
           ENC="$(find bin -type f -name 'EncoderApp' | head -n1)"; chmod +x "$ENC"
           FRAMES="${{ github.event.inputs.frames || '30' }}"
+          ENCCFG="${{ github.event.inputs.enc_cfg || 'encoder_randomaccess_vtm.cfg' }}"
           LABEL="${{ matrix.sequence }}"; QP="${{ matrix.qp }}"
           case "$LABEL" in
             Kimono)      CFG=Kimono.cfg;      GLOB='*Kimono*1920x1080*.yuv' ;;
@@ -84,7 +86,7 @@ jobs:
           YUV="$(find test_sequences -type f -iname "$GLOB" | head -n1)"
           if [ -z "$YUV" ]; then echo "YUV not found $LABEL"; exit 1; fi
           FRAMEARG=""; [ -n "$FRAMES" ] && FRAMEARG="-f $FRAMES"
-          "$ENC" -c cfg/encoder_randomaccess_vtm.cfg -c "$CFG" -i "$YUV" \
+          "$ENC" -c "cfg/$ENCCFG" -c "$CFG" -i "$YUV" \
             -b "encode_out/${{ matrix.sequence }}_qp${{ matrix.qp }}.bin" -o /dev/null -q "$QP" $FRAMEARG
       - name: Decode with TU trace ON
         env:
@@ -110,17 +112,17 @@ jobs:
         run: |
           mkdir -p tools
           echo IyEvdXNyL2Jpbi9lbnYgcHl0aG9uMwojIG1lcmdlX3R1X3RyYWNlLnB5IC0tIFBoYXNlIDEgcG9zdC1wcm9jZXNzaW5nLgojCiMgQ29uc3VtZXMgdGhlIHJhdyBwZXItY29tYm8gQ1NWcyBlbWl0dGVkIGJ5IHRoZSBpbnN0cnVtZW50ZWQgVlRNIGRlY29kZXIKIyAob25lIGZpbGUgcGVyIHNlcXVlbmNlIHggUVAsIG5hbWVkICI8U2VxPl9xcDxRUD4udHV0cmFjZS5jc3YiLCBoZWFkZXJsZXNzLAojIGNvbHVtbnM6IHBvYyxjb21wSUQseCx5LHdpZHRoLGhlaWdodCx0clR5cGVIb3IsdHJUeXBlVmVyKSBhbmQgcHJvZHVjZXM6CiMKIyAgIHR1X3RyYWNlLmNzdiAgICAgICAgb25lIHJvdyBwZXIgY29kZWQgVFUsIGFubm90YXRlZCB3aXRoIHNlcXVlbmNlL3FwL2NvbmZpZywKIyAgICAgICAgICAgICAgICAgICAgICAga2VybmVsIG5hbWVzLCBzaXplIGNsYXNzLCBhbmQgaGFyZHdhcmUgZWxpZ2liaWxpdHkgY2xhc3MKIyAgIHR1X2Rpc3RyaWJ1dGlvbi5jc3YgRmlnLTItc3R5bGUgcGl2b3Q6IGpvYiBjb3VudHMgYnkgKFd4SCwgZWxpZ2liaWxpdHkpCiMgICB0dV9zdW1tYXJ5LnR4dCAgICAgIGhlYWRsaW5lIHdvcmtsb2FkIHN0YXRzICh0b3RhbCBqb2JzLCAlTVRTLCAlbGFyZ2UgRENULUlJLAojICAgICAgICAgICAgICAgICAgICAgICAlbWl4ZWQtcGVyLWF4aXMga2VybmVsKSB1c2VkIHRvIGRyaXZlIFBoYXNlIDIgc2NoZWR1bGluZwojCiMgRWxpZ2liaWxpdHkgY2xhc3NlcyBtaXJyb3IgdHJpX2NvcmVfYXJiaXRlci52IHJvdXRpbmc6CiMgICBEQ1QyX0xBUkdFICAtPiBDb3JlIEEgICAgICAgKGJvdGggYXhlcyBEQ1QtSUkgQU5EIChhIDY0LWRpbSBPUiBib3RoPj0zMikpCiMgICBEQ1QyX1NNQUxMICAtPiBDb3JlIEIvQy9BICAgKGJvdGggYXhlcyBEQ1QtSUksIHNtYWxsKQojICAgTVRTICAgICAgICAgLT4gQ29yZSBCL0MgICAgIChlaXRoZXIgYXhpcyBEU1QtVklJL0RDVC1WSUlJLCBubyA2NC1kaW0pCiMgICBVTlNFUlZBQkxFICAtPiByZWplY3QvU1cgICAgIChlaXRoZXIgYXhpcyBNVFMgQU5EIGEgNjQtZGltIGF4aXMpCiMKIyBVc2FnZTogcHl0aG9uMyBtZXJnZV90dV90cmFjZS5weSA8cmF3X2Rpcj4gPG91dF9kaXI+IFstLWNvbmZpZyBBSV0KCmltcG9ydCBhcmdwYXJzZQppbXBvcnQgY3N2CmltcG9ydCBnbG9iCmltcG9ydCBvcwppbXBvcnQgcmUKZnJvbSBjb2xsZWN0aW9ucyBpbXBvcnQgQ291bnRlciwgZGVmYXVsdGRpY3QKCiMgVlRNIENvbW1vbkRlZiBUcmFuc1R5cGUgZW51bQpUUk5BTUUgPSB7MDogIkRDVDIiLCAxOiAiRENUOCIsIDI6ICJEU1Q3In0KQ09NUE5BTUUgPSB7MDogIlkiLCAxOiAiQ2IiLCAyOiAiQ3IifQoKRk5BTUVfUkUgPSByZS5jb21waWxlKHIiKD9QPHNlcT4uKz8pX3FwKD9QPHFwPlxkKylcLnR1dHJhY2VcLmNzdiQiLCByZS5JKQoKCmRlZiBzaXplX21vZGUobik6CiAgICAjIDQsOCwxNiwzMiw2NCAtPiBtb2RlIDAuLjQgKG1hdGNoZXMgc3ooKSBpbiB0aGUgUlRMKQogICAgcmV0dXJuIHs0OiAwLCA4OiAxLCAxNjogMiwgMzI6IDMsIDY0OiA0fS5nZXQobiwgLTEpCgoKZGVmIGVsaWdpYmlsaXR5KHcsIGgsIHRoLCB0dik6CiAgICBpc19kY3QyID0gKHRoID09IDAgYW5kIHR2ID09IDApCiAgICBoYXM2NCA9ICh3ID09IDY0IG9yIGggPT0gNjQpCiAgICBpZiBub3QgaXNfZGN0MiBhbmQgaGFzNjQ6CiAgICAgICAgcmV0dXJuICJVTlNFUlZBQkxFIgogICAgaWYgaXNfZGN0MjoKICAgICAgICBpc19sYXJnZSA9IGhhczY0IG9yICh3ID49IDMyIGFuZCBoID49IDMyKQogICAgICAgIHJldHVybiAiRENUMl9MQVJHRSIgaWYgaXNfbGFyZ2UgZWxzZSAiRENUMl9TTUFMTCIKICAgIHJldHVybiAiTVRTIgoKCmRlZiBtYWluKCk6CiAgICBhcCA9IGFyZ3BhcnNlLkFyZ3VtZW50UGFyc2VyKCkKICAgIGFwLmFkZF9hcmd1bWVudCgicmF3X2RpciIpCiAgICBhcC5hZGRfYXJndW1lbnQoIm91dF9kaXIiKQogICAgYXAuYWRkX2FyZ3VtZW50KCItLWNvbmZpZyIsIGRlZmF1bHQ9IkFJIikKICAgIGFyZ3MgPSBhcC5wYXJzZV9hcmdzKCkKICAgIG9zLm1ha2VkaXJzKGFyZ3Mub3V0X2RpciwgZXhpc3Rfb2s9VHJ1ZSkKCiAgICBmaWxlcyA9IHNvcnRlZChnbG9iLmdsb2Iob3MucGF0aC5qb2luKGFyZ3MucmF3X2RpciwgIioqIiwgIioudHV0cmFjZS5jc3YiKSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICByZWN1cnNpdmU9VHJ1ZSkpCiAgICBpZiBub3QgZmlsZXM6CiAgICAgICAgcmFpc2UgU3lzdGVtRXhpdCgibm8gKi50dXRyYWNlLmNzdiBmaWxlcyB1bmRlciAlcyIgJSBhcmdzLnJhd19kaXIpCgogICAgb3V0X3Jvd3MgPSBbXQogICAgZGlzdCA9IENvdW50ZXIoKSAgICAgICAgICAgICAgICAgICAgICAgIyAoV3hILCBlbGlnaWJpbGl0eSkgLT4gY291bnQKICAgIGVsaWdfY3QgPSBDb3VudGVyKCkKICAgIHBlcl9zZXEgPSBkZWZhdWx0ZGljdChDb3VudGVyKQogICAgdG90YWwgPSAwCiAgICBsdW1hID0gMAogICAgbWl4ZWRfYXhpcyA9IDAgICAgICAgICAgICAgICAgICAgICAgICAgIyBwZXItYXhpcyBrZXJuZWwgZGlmZmVycwogICAgbXRzX2x1bWEgPSAwCgogICAgZm9yIGZwIGluIGZpbGVzOgogICAgICAgIG0gPSBGTkFNRV9SRS5zZWFyY2gob3MucGF0aC5iYXNlbmFtZShmcCkpCiAgICAgICAgc2VxID0gbS5ncm91cCgic2VxIikgaWYgbSBlbHNlIG9zLnBhdGguYmFzZW5hbWUoZnApCiAgICAgICAgcXAgPSBpbnQobS5ncm91cCgicXAiKSkgaWYgbSBlbHNlIC0xCiAgICAgICAgd2l0aCBvcGVuKGZwLCBuZXdsaW5lPSIiKSBhcyBmOgogICAgICAgICAgICBmb3IgcmVjIGluIGNzdi5yZWFkZXIoZik6CiAgICAgICAgICAgICAgICBpZiBsZW4ocmVjKSA8IDg6CiAgICAgICAgICAgICAgICAgICAgY29udGludWUKICAgICAgICAgICAgICAgIHRyeToKICAgICAgICAgICAgICAgICAgICBwb2MsIGNvbXAsIHgsIHksIHcsIGgsIHRoLCB0diA9IChpbnQodikgZm9yIHYgaW4gcmVjWzo4XSkKICAgICAgICAgICAgICAgIGV4Y2VwdCBWYWx1ZUVycm9yOgogICAgICAgICAgICAgICAgICAgIGNvbnRpbnVlCiAgICAgICAgICAgICAgICBlbGlnID0gZWxpZ2liaWxpdHkodywgaCwgdGgsIHR2KQogICAgICAgICAgICAgICAgdG90YWwgKz0gMQogICAgICAgICAgICAgICAgZWxpZ19jdFtlbGlnXSArPSAxCiAgICAgICAgICAgICAgICBkaXN0WygiJWR4JWQiICUgKHcsIGgpLCBlbGlnKV0gKz0gMQogICAgICAgICAgICAgICAgcGVyX3NlcVtzZXFdW2VsaWddICs9IDEKICAgICAgICAgICAgICAgIGlmIGNvbXAgPT0gMDoKICAgICAgICAgICAgICAgICAgICBsdW1hICs9IDEKICAgICAgICAgICAgICAgICAgICBpZiB0aCAhPSB0djoKICAgICAgICAgICAgICAgICAgICAgICAgbWl4ZWRfYXhpcyArPSAxCiAgICAgICAgICAgICAgICAgICAgaWYgbm90ICh0aCA9PSAwIGFuZCB0diA9PSAwKToKICAgICAgICAgICAgICAgICAgICAgICAgbXRzX2x1bWEgKz0gMQogICAgICAgICAgICAgICAgb3V0X3Jvd3MuYXBwZW5kKFtzZXEsIHFwLCBhcmdzLmNvbmZpZywgcG9jLCBDT01QTkFNRS5nZXQoY29tcCwgY29tcCksCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHgsIHksIHcsIGgsIFRSTkFNRS5nZXQodGgsIHRoKSwgVFJOQU1FLmdldCh0diwgdHYpLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzaXplX21vZGUodyksIHNpemVfbW9kZShoKSwgZWxpZ10pCgogICAgIyAtLS0tIHR1X3RyYWNlLmNzdiAtLS0tCiAgICB0cmFjZV9wYXRoID0gb3MucGF0aC5qb2luKGFyZ3Mub3V0X2RpciwgInR1X3RyYWNlLmNzdiIpCiAgICB3aXRoIG9wZW4odHJhY2VfcGF0aCwgInciLCBuZXdsaW5lPSIiKSBhcyBmOgogICAgICAgIHd0ciA9IGNzdi53cml0ZXIoZikKICAgICAgICB3dHIud3JpdGVyb3coWyJzZXF1ZW5jZSIsICJxcCIsICJjb25maWciLCAicG9jIiwgImNvbXAiLCAieCIsICJ5IiwKICAgICAgICAgICAgICAgICAgICAgICJ3aWR0aCIsICJoZWlnaHQiLCAidHJUeXBlSG9yIiwgInRyVHlwZVZlciIsCiAgICAgICAgICAgICAgICAgICAgICAid19tb2RlIiwgImhfbW9kZSIsICJlbGlnaWJpbGl0eSJdKQogICAgICAgIHd0ci53cml0ZXJvd3Mob3V0X3Jvd3MpCgogICAgIyAtLS0tIHR1X2Rpc3RyaWJ1dGlvbi5jc3YgLS0tLQogICAgZGlzdF9wYXRoID0gb3MucGF0aC5qb2luKGFyZ3Mub3V0X2RpciwgInR1X2Rpc3RyaWJ1dGlvbi5jc3YiKQogICAgd2l0aCBvcGVuKGRpc3RfcGF0aCwgInciLCBuZXdsaW5lPSIiKSBhcyBmOgogICAgICAgIHd0ciA9IGNzdi53cml0ZXIoZikKICAgICAgICB3dHIud3JpdGVyb3coWyJibG9jayIsICJlbGlnaWJpbGl0eSIsICJjb3VudCIsICJwY3Rfb2ZfdG90YWwiXSkKICAgICAgICBmb3IgKGJsaywgZWxpZyksIGMgaW4gc29ydGVkKGRpc3QuaXRlbXMoKSwga2V5PWxhbWJkYSBrdjogLWt2WzFdKToKICAgICAgICAgICAgd3RyLndyaXRlcm93KFtibGssIGVsaWcsIGMsIHJvdW5kKDEwMC4wICogYyAvIHRvdGFsLCA0KV0pCgogICAgIyAtLS0tIHR1X3N1bW1hcnkudHh0IC0tLS0KICAgIHN1bV9wYXRoID0gb3MucGF0aC5qb2luKGFyZ3Mub3V0X2RpciwgInR1X3N1bW1hcnkudHh0IikKICAgIHdpdGggb3BlbihzdW1fcGF0aCwgInciKSBhcyBmOgogICAgICAgIGYud3JpdGUoIlBoYXNlIDEgLS0gVlRNIGNvZGVkLVRVIHdvcmtsb2FkIHN1bW1hcnlcbiIpCiAgICAgICAgZi53cml0ZSgiY29uZmlnPSVzICBmaWxlcz0lZFxuIiAlIChhcmdzLmNvbmZpZywgbGVuKGZpbGVzKSkpCiAgICAgICAgZi53cml0ZSgidG90YWwgY29kZWQgdHJhbnNmb3JtIGpvYnM6ICVkXG4iICUgdG90YWwpCiAgICAgICAgZi53cml0ZSgiICBsdW1hIGpvYnM6ICVkXG4iICUgbHVtYSkKICAgICAgICBmLndyaXRlKCJcbkVsaWdpYmlsaXR5IGNsYXNzIChyb3V0aW5nIHRhcmdldCk6XG4iKQogICAgICAgIGZvciBrIGluICgiRENUMl9MQVJHRSIsICJEQ1QyX1NNQUxMIiwgIk1UUyIsICJVTlNFUlZBQkxFIik6CiAgICAgICAgICAgIGMgPSBlbGlnX2N0LmdldChrLCAwKQogICAgICAgICAgICBmLndyaXRlKCIgICUtMTFzICUxMGQgICU2LjJmJSVcbiIgJSAoaywgYywgMTAwLjAgKiBjIC8gdG90YWwgaWYgdG90YWwgZWxzZSAwKSkKICAgICAgICBpZiBsdW1hOgogICAgICAgICAgICBmLndyaXRlKCJcbkx1bWEgTVRTIGFjdGl2aXR5OiAlLjJmJSVcbiIgJSAoMTAwLjAgKiBtdHNfbHVtYSAvIGx1bWEpKQogICAgICAgICAgICBmLndyaXRlKCJMdW1hIG1peGVkIHBlci1heGlzIGtlcm5lbCAodHJIb3IhPXRyVmVyKTogJS4yZiUlIgogICAgICAgICAgICAgICAgICAgICIgICAobWFudXNjcmlwdC9SVEwgcmVmZXJlbmNlIH43LjclJSlcbiIgJSAoMTAwLjAgKiBtaXhlZF9heGlzIC8gbHVtYSkpCiAgICAgICAgZi53cml0ZSgiXG5Ub3AgMTIgKGJsb2NrLCBjbGFzcykgYnkgZnJlcXVlbmN5OlxuIikKICAgICAgICBmb3IgKGJsaywgZWxpZyksIGMgaW4gc29ydGVkKGRpc3QuaXRlbXMoKSwga2V5PWxhbWJkYSBrdjogLWt2WzFdKVs6MTJdOgogICAgICAgICAgICBmLndyaXRlKCIgICUtOXMgJS0xMXMgJTEwZCAgJTYuMmYlJVxuIiAlIChibGssIGVsaWcsIGMsIDEwMC4wICogYyAvIHRvdGFsKSkKCiAgICBwcmludCgid3JvdGU6IikKICAgIGZvciBwIGluICh0cmFjZV9wYXRoLCBkaXN0X3BhdGgsIHN1bV9wYXRoKToKICAgICAgICBwcmludCgiICAlcyIgJSBwKQogICAgcHJpbnQoInRvdGFsIGpvYnM6ICVkIiAlIHRvdGFsKQoKCmlmIF9fbmFtZV9fID09ICJfX21haW5fXyI6CiAgICBtYWluKCkK | base64 -d > tools/merge_tu_trace.py
-      - name: Collect all per-combo traces
+      - name: Collect traces
         uses: actions/download-artifact@v4
         with:
           pattern: tutrace-*
           path: raw
           merge-multiple: true
-      - name: Merge + classify workload
+      - name: Merge + classify
         run: |
           python3 tools/merge_tu_trace.py raw out --config "${{ github.event.inputs.config_tag || 'RA' }}"
           echo "----- tu_summary.txt -----"; cat out/tu_summary.txt
-      - name: Upload consolidated workload (tu-traces)
+      - name: Upload consolidated workload
         if: always()
         uses: actions/upload-artifact@v4
         with:
