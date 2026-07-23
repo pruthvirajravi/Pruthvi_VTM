@@ -1,7 +1,13 @@
 # Phase 1 -- VTM coded-TU workload trace (self-contained; tools embedded as base64).
-# PARAMETERIZED: enc_cfg selects the JVET coding configuration so the same
-# workflow traces AI / RA / LDB / LDP. Decoder-side capture -> final coded TUs.
+# PARAMETERIZED by enc_cfg (AI/RA/LDB/LDP). Decoder-side capture -> final coded TUs.
+#
+# FIX (concurrency/Drive-quota): sequences are downloaded ONCE in a cached prep
+# job and restored from cache by every trace job -- instead of 32x gdown per run.
+# Cuts Google-Drive load ~32x and lets repeated/parallel runs reuse one download.
 name: VTM TU Trace (Phase 1)
+concurrency:
+  group: vtm-tu-trace
+  cancel-in-progress: false
 on:
   workflow_dispatch:
     inputs:
@@ -22,8 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install build tools
-        run: sudo apt-get update && sudo apt-get install -y cmake build-essential
+      - run: sudo apt-get update && sudo apt-get install -y cmake build-essential
       - name: Write instrumentation tool
         run: |
           mkdir -p tools
@@ -44,8 +49,29 @@ jobs:
             bin/**/EncoderApp
             bin/**/DecoderApp
           if-no-files-found: error
+  prep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Restore/seed sequence cache
+        id: seqcache
+        uses: actions/cache@v4
+        with:
+          path: test_sequences
+          key: vtm-test-sequences-v1
+      - name: Download sequences ONCE (only on cache miss, with retry)
+        if: steps.seqcache.outputs.cache-hit != 'true'
+        run: |
+          pip install --quiet gdown
+          mkdir -p test_sequences
+          ok=0
+          for i in 1 2 3 4 5 6; do
+            if gdown --folder "https://drive.google.com/drive/folders/1UTcDr13oZb6qzkoiAdiqP_qhcN_qpQoe" -O test_sequences; then ok=1; break; fi
+            echo "gdown attempt $i failed (Drive rate/quota) -- sleeping 60s"; sleep 60
+          done
+          if [ "$ok" != "1" ]; then echo "gdown failed after retries (Drive quota likely exhausted; retry after ~24h)"; exit 1; fi
+          echo "downloaded:"; find test_sequences -type f | wc -l
   trace:
-    needs: build
+    needs: [build, prep]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -59,11 +85,17 @@ jobs:
         with:
           name: vtm-binaries
           path: bin
-      - name: Download sequences
+      - name: Restore sequences from cache (no Drive access)
+        id: seqcache
+        uses: actions/cache@v4
+        with:
+          path: test_sequences
+          key: vtm-test-sequences-v1
+      - name: Verify sequences present
         run: |
-          pip install --quiet gdown
-          mkdir -p test_sequences
-          gdown --folder "https://drive.google.com/drive/folders/1UTcDr13oZb6qzkoiAdiqP_qhcN_qpQoe" -O test_sequences
+          if [ ! -d test_sequences ] || [ -z "$(find test_sequences -type f -name '*.yuv' 2>/dev/null)" ]; then
+            echo "sequence cache empty -- prep did not populate it"; exit 1
+          fi
       - name: Encode -> .bin (trace OFF)
         run: |
           set -u
