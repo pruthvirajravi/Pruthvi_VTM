@@ -1,9 +1,9 @@
-# Phase 1 -- VTM coded-TU workload trace (self-contained; tools embedded as base64).
-# PARAMETERIZED by enc_cfg (AI/RA/LDB/LDP). Decoder-side capture -> final coded TUs.
-# Sequences pulled ONCE into a cached prep job (fresh-quota Drive) and reused by
-# every trace job -- no repeated Google-Drive hits.
+# Phase 1 -- VTM coded-TU workload trace (self-contained; tools base64-embedded).
+# CTC-honest frame counts: inter (RA/LDB/LDP) = 128 frames (>=2 intra periods, 8 GOPs);
+# AI uses encoder_intra_vtm.cfg TemporalSubsampleRatio=8, so 256 source frames -> ~32 encoded
+# intra frames (vs the previous 4). Sequences cached once (fresh-quota Drive).
 name: VTM TU Trace (Phase 1)
-run-name: 'Phase 1 TU Trace -- ${{ inputs.config_tag }}  (cfg ${{ inputs.enc_cfg }})'
+run-name: 'Phase 1 TU Trace -- ${{ inputs.config_tag }}  (cfg ${{ inputs.enc_cfg }}, CTC frames)'
 on:
   workflow_dispatch:
     inputs:
@@ -15,10 +15,6 @@ on:
         description: 'Short tag recorded in the trace + run name (AI/RA/LDB/LDP)'
         required: false
         default: 'RA'
-      frames:
-        description: 'Frames per clip'
-        required: false
-        default: '30'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -64,12 +60,9 @@ jobs:
             gdown --folder "https://drive.google.com/drive/folders/17rwtLY3f49dQRy2CT2Jl1w5eTJdc3TvK" -O test_sequences || true
             n=$(find test_sequences -type f -iname '*.yuv' | wc -l)
             if [ "$n" -ge 8 ]; then ok=1; echo "got $n sequences"; break; fi
-            echo "attempt $i: only $n/8 sequences (Drive rate/quota or upload incomplete) -- sleeping 60s"
-            sleep 60
+            echo "attempt $i: only $n/8 -- sleeping 60s"; sleep 60
           done
-          if [ "$ok" != "1" ]; then
-            echo "FAILED: fewer than 8 sequences -- NOT caching a partial set"; rm -rf test_sequences; exit 1
-          fi
+          if [ "$ok" != "1" ]; then echo "FAILED: <8 sequences"; rm -rf test_sequences; exit 1; fi
           find test_sequences -type f -iname '*.yuv' -printf '%f\n'
   trace:
     needs: [build, prep]
@@ -94,13 +87,12 @@ jobs:
       - name: Verify sequences present
         run: |
           if [ -z "$(find test_sequences -type f -iname '*.yuv' 2>/dev/null)" ]; then
-            echo "sequence cache empty -- prep did not populate it"; exit 1
+            echo "sequence cache empty"; exit 1
           fi
-      - name: Encode -> .bin (trace OFF)
+      - name: Encode -> .bin (trace OFF, CTC-honest frame count)
         run: |
           set -u
           ENC="$(find bin -type f -name 'EncoderApp' | head -n1)"; chmod +x "$ENC"
-          FRAMES="${{ github.event.inputs.frames || '30' }}"
           ENCCFG="${{ github.event.inputs.enc_cfg || 'encoder_randomaccess_vtm.cfg' }}"
           LABEL="${{ matrix.sequence }}"; QP="${{ matrix.qp }}"
           case "$LABEL" in
@@ -117,9 +109,11 @@ jobs:
           CFG="cfg/per-sequence/$CFG"; mkdir -p encode_out
           YUV="$(find test_sequences -type f -iname "$GLOB" | head -n1)"
           if [ -z "$YUV" ]; then echo "YUV not found $LABEL"; exit 1; fi
-          FRAMEARG=""; [ -n "$FRAMES" ] && FRAMEARG="-f $FRAMES"
+          # CTC-honest length: inter 128 frames; AI (TemporalSubsampleRatio=8) 256 source -> ~32 encoded
+          if [ "$ENCCFG" = "encoder_intra_vtm.cfg" ]; then FR=256; else FR=128; fi
+          echo "encoding $LABEL qp$QP with -f $FR (cfg $ENCCFG)"
           "$ENC" -c "cfg/$ENCCFG" -c "$CFG" -i "$YUV" \
-            -b "encode_out/${{ matrix.sequence }}_qp${{ matrix.qp }}.bin" -o /dev/null -q "$QP" $FRAMEARG
+            -b "encode_out/${{ matrix.sequence }}_qp${{ matrix.qp }}.bin" -o /dev/null -q "$QP" -f "$FR"
       - name: Decode with TU trace ON
         env:
           VTM_TU_TRACE: ${{ github.workspace }}/${{ matrix.sequence }}_qp${{ matrix.qp }}.tutrace.csv
@@ -154,7 +148,7 @@ jobs:
         run: |
           python3 tools/merge_tu_trace.py raw out --config "${{ github.event.inputs.config_tag || 'RA' }}"
           echo "----- tu_summary.txt -----"; cat out/tu_summary.txt
-      - name: Upload consolidated workload (tagged by config)
+      - name: Upload consolidated workload
         if: always()
         uses: actions/upload-artifact@v4
         with:
