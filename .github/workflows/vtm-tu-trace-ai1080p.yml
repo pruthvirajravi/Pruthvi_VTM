@@ -101,12 +101,22 @@ jobs:
           # frames (64 source frames) via --FrameSkip so each job stays well under the 6h
           # cap. Shards tile source [0,256) with NO overlap; union == full 32-frame run.
           SUB=8; ENC_PER_SHARD=8
-          SRC_PER_SHARD=$((ENC_PER_SHARD*SUB))      # 64 source frames per shard
+          SRC_PER_SHARD=$((ENC_PER_SHARD*SUB))      # nominal 64 source frames per shard
           FS=$((SHARD*SRC_PER_SHARD))               # 0,64,128,192
-          echo "encoding $LABEL qp$QP shard $SHARD: --FrameSkip=$FS -f $SRC_PER_SHARD (8 intra frames)"
+          # Derive TRUE source length from the YUV file size (4:2:0 8-bit => W*H*3/2 bytes/
+          # frame) and cap this shard's read so it NEVER runs past EOF. Kimono/ParkScene are
+          # 240 frames, so shard 3 (FS=192) reads only [192,240) = 48 src -> 6 intra frames,
+          # instead of demanding [192,256) and hanging VTM on the past-EOF over-read.
+          DIMS=$(basename "$YUV" | grep -oE '[0-9]+x[0-9]+' | head -n1)
+          W=${DIMS%x*}; H=${DIMS#*x}
+          BYTES=$(stat -c%s "$YUV"); FRAME_BYTES=$((W*H*3/2)); TOTAL=$((BYTES/FRAME_BYTES))
+          REMAIN=$((TOTAL-FS))
+          if [ "$REMAIN" -le 0 ]; then echo "shard $SHARD starts past EOF (TOTAL=$TOTAL) -- skip"; exit 0; fi
+          READ=$SRC_PER_SHARD; [ "$REMAIN" -lt "$SRC_PER_SHARD" ] && READ=$REMAIN
+          echo "encoding $LABEL qp$QP shard $SHARD: TOTAL=$TOTAL --FrameSkip=$FS -f $READ"
           "$ENC" -c cfg/encoder_intra_vtm.cfg -c "$CFG" -i "$YUV" \
             -b "encode_out/${LABEL}_qp${QP}_s${SHARD}.bin" -o /dev/null \
-            -q "$QP" --FrameSkip=$FS -f "$SRC_PER_SHARD"
+            -q "$QP" --FrameSkip=$FS -f "$READ"
       - name: Decode shard with TU trace ON
         env:
           VTM_TU_TRACE: ${{ github.workspace }}/${{ matrix.sequence }}_qp${{ matrix.qp }}.tutrace.csv
