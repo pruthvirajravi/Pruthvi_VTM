@@ -1,0 +1,90 @@
+# Phase 1 (POC-collision fix) -- re-merges already-encoded/decoded shard
+# artifacts with a corrected per-shard POC offset. NO re-encoding: this job
+# only downloads existing tutrace-* artifacts from prior runs (by run-id) and
+# re-runs a corrected merge. Fixes: raw shard CSVs report POC restarting at 0
+# per shard (VTM has no knowledge of --FrameSkip when numbering POC inside a
+# sub-encode), so the original merge_tu_trace.py concatenated colliding POC
+# labels for every sharded sequence (Kimono, ParkScene -- the only two that
+# needed sharding under the 6h/job cap). This workflow adds shard_idx *
+# shard_frames to poc before merging, using the artifact-name-derived shard
+# index and a caller-supplied shard size (64 for the original 2x64 inter
+# shards, 32 for the Kimono-qp22 4x32 recovery, 8 for the AI-1080p 4x8
+# shards). Aggregate eligibility-class stats (DCT2_LARGE/SMALL/MTS/
+# UNSERVABLE, %MTS, etc.) were NEVER affected by this bug -- poc is not used
+# in that accounting -- only per-frame/POC-level analysis was.
+name: VTM TU Trace (POC fix -- re-merge existing shards, no re-encode)
+run-name: 'POC fix -- ${{ inputs.config_tag }} (run ${{ inputs.run_id_a }})'
+on:
+  workflow_dispatch:
+    inputs:
+      config_tag:
+        description: 'Config label to stamp in output (AI/RA/LDB/LDP)'
+        required: true
+        default: 'RA'
+      run_id_a:
+        description: 'Run ID holding the primary set of raw tutrace-* shard artifacts'
+        required: true
+      shard_frames_a:
+        description: 'Shard size (frames) used when encoding run_id_a shards (64 inter / 8 AI-1080p)'
+        required: true
+        default: '64'
+      run_id_b:
+        description: 'Optional recovery run ID whose shards supersede one combo (0 = none)'
+        required: false
+        default: '0'
+      shard_frames_b:
+        description: 'Shard size for run_id_b (e.g. 32 for the Kimono-qp22 4x32 recovery)'
+        required: false
+        default: '32'
+      exclude_prefix:
+        description: 'Artifact-name prefix to drop from run_id_a when run_id_b supersedes it (e.g. tutrace-Kimono-qp22-)'
+        required: false
+        default: ''
+jobs:
+  refix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Write corrected merge tool
+        run: |
+          mkdir -p tools
+          echo IyEvdXNyL2Jpbi9lbnYgcHl0aG9uMwojIG1lcmdlX3R1X3RyYWNlX3YyLnB5IC0tIFBoYXNlIDEgcG9zdC1wcm9jZXNzaW5nIFdJVEggc2hhcmQtb2Zmc2V0IGNvcnJlY3Rpb24uCiMKIyBGaXhlcyBhIGJ1ZyBpbiBtZXJnZV90dV90cmFjZS5weTogcmF3IHBlci1zaGFyZCB0dXRyYWNlLmNzdiBmaWxlcyBlYWNoIHJlcG9ydAojIFBPQyByZXN0YXJ0aW5nIGF0IDAgKFZUTSBudW1iZXJzIFBPQyB3aXRoaW4gaXRzIG93biAtLUZyYW1lU2tpcCBzdWItZW5jb2RlLAojIHdpdGggbm8ga25vd2xlZGdlIG9mIHRoZSBzaGFyZCdzIGdsb2JhbCBvZmZzZXQpLiBUaGUgb3JpZ2luYWwgbWVyZ2Ugc2NyaXB0CiMgY29uY2F0ZW5hdGVkIHRoZXNlIHZlcmJhdGltLCBzbyBmcmFtZXMgZnJvbSBkaWZmZXJlbnQgc2hhcmRzIGNvbGxpZGVkIHVuZGVyCiMgdGhlIHNhbWUgcG9jIGxhYmVsIGZvciBldmVyeSBzaGFyZGVkIHNlcXVlbmNlIChLaW1vbm8sIFBhcmtTY2VuZSAtLSB0aGUgb25seQojIHR3byB0aGF0IG5lZWRlZCBzaGFyZGluZyB0byBmaXQgdGhlIDZoL2pvYiBjYXAsIGluIGFsbCA0IGNvbmZpZ3MpLgojCiMgVGhpcyB2ZXJzaW9uIGRlcml2ZXMgZWFjaCBzaGFyZCdzIGluZGV4IGZyb20gaXRzIGFydGlmYWN0LW5hbWUtZGVyaXZlZAojIHN1YmRpcmVjdG9yeSAocmF3LyoqL3R1dHJhY2UtPHNlcT4tcXA8cXA+LXM8c2hhcmQ+LzxzZXE+X3FwPHFwPi50dXRyYWNlLmNzdiwKIyB3aGljaCBkb3dubG9hZC1hcnRpZmFjdEB2NCBjcmVhdGVzIG9uZS1wZXItYXJ0aWZhY3QpIGFuZCBhZGRzCiMgc2hhcmRfaWR4ICogc2hhcmRfZnJhbWVzIHRvIHBvYyBiZWZvcmUgd3JpdGluZywgcmVzdG9yaW5nIGNvcnJlY3QgZ2xvYmFsCiMgZnJhbWUgbnVtYmVyaW5nLiBTdXBwb3J0cyBtdWx0aXBsZSAtLWlucHV0IGRpcnMgd2l0aCBpbmRlcGVuZGVudAojIC0tc2hhcmQtZnJhbWVzIChuZWVkZWQgYmVjYXVzZSBlLmcuIHRoZSBLaW1vbm8tcXAyMiByZWNvdmVyeSB1c2VkIDMyLWZyYW1lCiMgc2hhcmRzIHdoaWxlIGV2ZXJ5dGhpbmcgZWxzZSB1c2VkIDY0KSwgYW5kIGFuIC0tZXhjbHVkZSBwcmVmaXggcGVyIGlucHV0IHRvCiMgZHJvcCBjb21ib3Mgc3VwZXJzZWRlZCBieSBhIGxhdGVyIC0taW5wdXQuCiMKIyBPdXRwdXQgc2NoZW1hIC8gZWxpZ2liaWxpdHkgbG9naWMgYXJlIFVOQ0hBTkdFRCBmcm9tIHRoZSBvcmlnaW5hbCBzY3JpcHQuCiMKIyBVc2FnZToKIyAgIHB5dGhvbjMgbWVyZ2VfdHVfdHJhY2VfdjIucHkgPG91dF9kaXI+IC0tY29uZmlnIFJBIFwKIyAgICAgLS1pbnB1dCByYXdfYSAtLXNoYXJkLWZyYW1lcyA2NCAtLWV4Y2x1ZGUgdHV0cmFjZS1LaW1vbm8tcXAyMi0gXAojICAgICAtLWlucHV0IHJhd19iIC0tc2hhcmQtZnJhbWVzIDMyCgppbXBvcnQgYXJncGFyc2UKaW1wb3J0IGNzdgppbXBvcnQgZ2xvYgppbXBvcnQgb3MKaW1wb3J0IHJlCmZyb20gY29sbGVjdGlvbnMgaW1wb3J0IENvdW50ZXIKClRSTkFNRSA9IHswOiAiRENUMiIsIDE6ICJEQ1Q4IiwgMjogIkRTVDcifQpDT01QTkFNRSA9IHswOiAiWSIsIDE6ICJDYiIsIDI6ICJDciJ9CkZOQU1FX1JFID0gcmUuY29tcGlsZShyIig/UDxzZXE+Lis/KV9xcCg/UDxxcD5cZCspXC50dXRyYWNlXC5jc3YkIiwgcmUuSSkKU0hBUkRfRElSX1JFID0gcmUuY29tcGlsZShyInR1dHJhY2UtKD9QPHNlcT4uKz8pLXFwKD9QPHFwPlxkKyktcyg/UDxzaGFyZD5cZCspJCIsIHJlLkkpCgoKZGVmIHNpemVfbW9kZShuKToKICAgIHJldHVybiB7NDogMCwgODogMSwgMTY6IDIsIDMyOiAzLCA2NDogNH0uZ2V0KG4sIC0xKQoKCmRlZiBlbGlnaWJpbGl0eSh3LCBoLCB0aCwgdHYpOgogICAgaXNfZGN0MiA9ICh0aCA9PSAwIGFuZCB0diA9PSAwKQogICAgaGFzNjQgPSAodyA9PSA2NCBvciBoID09IDY0KQogICAgaWYgbm90IGlzX2RjdDIgYW5kIGhhczY0OgogICAgICAgIHJldHVybiAiVU5TRVJWQUJMRSIKICAgIGlmIGlzX2RjdDI6CiAgICAgICAgaXNfbGFyZ2UgPSBoYXM2NCBvciAodyA+PSAzMiBhbmQgaCA+PSAzMikKICAgICAgICByZXR1cm4gIkRDVDJfTEFSR0UiIGlmIGlzX2xhcmdlIGVsc2UgIkRDVDJfU01BTEwiCiAgICByZXR1cm4gIk1UUyIKCgpkZWYgc2hhcmRfaW5kZXhfZm9yKGZwKToKICAgIGQgPSBvcy5wYXRoLmRpcm5hbWUoZnApCiAgICB3aGlsZSBkIGFuZCBkIG5vdCBpbiAoIi8iLCAiIik6CiAgICAgICAgbSA9IFNIQVJEX0RJUl9SRS5tYXRjaChvcy5wYXRoLmJhc2VuYW1lKGQpKQogICAgICAgIGlmIG06CiAgICAgICAgICAgIHJldHVybiBpbnQobS5ncm91cCgic2hhcmQiKSkKICAgICAgICBuZCA9IG9zLnBhdGguZGlybmFtZShkKQogICAgICAgIGlmIG5kID09IGQ6CiAgICAgICAgICAgIGJyZWFrCiAgICAgICAgZCA9IG5kCiAgICByZXR1cm4gMAoKCmRlZiBtYWluKCk6CiAgICBhcCA9IGFyZ3BhcnNlLkFyZ3VtZW50UGFyc2VyKCkKICAgIGFwLmFkZF9hcmd1bWVudCgib3V0X2RpciIpCiAgICBhcC5hZGRfYXJndW1lbnQoIi0tY29uZmlnIiwgZGVmYXVsdD0iQUkiKQogICAgYXAuYWRkX2FyZ3VtZW50KCItLWlucHV0IiwgYWN0aW9uPSJhcHBlbmQiLCBkZWZhdWx0PVtdKQogICAgYXAuYWRkX2FyZ3VtZW50KCItLXNoYXJkLWZyYW1lcyIsIGFjdGlvbj0iYXBwZW5kIiwgZGVmYXVsdD1bXSwgdHlwZT1pbnQpCiAgICBhcC5hZGRfYXJndW1lbnQoIi0tZXhjbHVkZSIsIGFjdGlvbj0iYXBwZW5kIiwgZGVmYXVsdD1bXSkKICAgIGFyZ3MgPSBhcC5wYXJzZV9hcmdzKCkKICAgIGlmIGxlbihhcmdzLmlucHV0KSAhPSBsZW4oYXJncy5zaGFyZF9mcmFtZXMpOgogICAgICAgIHJhaXNlIFN5c3RlbUV4aXQoIi0taW5wdXQgYW5kIC0tc2hhcmQtZnJhbWVzIGNvdW50cyBtdXN0IG1hdGNoIikKICAgIGV4Y2x1ZGVzID0gYXJncy5leGNsdWRlICsgWyIiXSAqIChsZW4oYXJncy5pbnB1dCkgLSBsZW4oYXJncy5leGNsdWRlKSkKCiAgICBvcy5tYWtlZGlycyhhcmdzLm91dF9kaXIsIGV4aXN0X29rPVRydWUpCiAgICBvdXRfcm93cyA9IFtdCiAgICBkaXN0ID0gQ291bnRlcigpCiAgICBlbGlnX2N0ID0gQ291bnRlcigpCiAgICB0b3RhbCA9IDAKICAgIGx1bWEgPSAwCiAgICBtaXhlZF9heGlzID0gMAogICAgbXRzX2x1bWEgPSAwCiAgICBmaWxlc19zZWVuID0gMAoKICAgIGZvciByYXdfZGlyLCBzZiwgZXhjbCBpbiB6aXAoYXJncy5pbnB1dCwgYXJncy5zaGFyZF9mcmFtZXMsIGV4Y2x1ZGVzKToKICAgICAgICBmaWxlcyA9IHNvcnRlZChnbG9iLmdsb2Iob3MucGF0aC5qb2luKHJhd19kaXIsICIqKiIsICIqLnR1dHJhY2UuY3N2IiksIHJlY3Vyc2l2ZT1UcnVlKSkKICAgICAgICBmb3IgZnAgaW4gZmlsZXM6CiAgICAgICAgICAgIGlmIGV4Y2wgYW5kIGV4Y2wgaW4gZnA6CiAgICAgICAgICAgICAgICBjb250aW51ZQogICAgICAgICAgICBtID0gRk5BTUVfUkUuc2VhcmNoKG9zLnBhdGguYmFzZW5hbWUoZnApKQogICAgICAgICAgICBzZXEgPSBtLmdyb3VwKCJzZXEiKSBpZiBtIGVsc2Ugb3MucGF0aC5iYXNlbmFtZShmcCkKICAgICAgICAgICAgcXAgPSBpbnQobS5ncm91cCgicXAiKSkgaWYgbSBlbHNlIC0xCiAgICAgICAgICAgIG9mZnNldCA9IHNoYXJkX2luZGV4X2ZvcihmcCkgKiBzZgogICAgICAgICAgICBmaWxlc19zZWVuICs9IDEKICAgICAgICAgICAgd2l0aCBvcGVuKGZwLCBuZXdsaW5lPSIiKSBhcyBmOgogICAgICAgICAgICAgICAgZm9yIHJlYyBpbiBjc3YucmVhZGVyKGYpOgogICAgICAgICAgICAgICAgICAgIGlmIGxlbihyZWMpIDwgODoKICAgICAgICAgICAgICAgICAgICAgICAgY29udGludWUKICAgICAgICAgICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICAgICAgICAgIHBvYywgY29tcCwgeCwgeSwgdywgaCwgdGgsIHR2ID0gKGludCh2KSBmb3IgdiBpbiByZWNbOjhdKQogICAgICAgICAgICAgICAgICAgIGV4Y2VwdCBWYWx1ZUVycm9yOgogICAgICAgICAgICAgICAgICAgICAgICBjb250aW51ZQogICAgICAgICAgICAgICAgICAgIHBvYyArPSBvZmZzZXQKICAgICAgICAgICAgICAgICAgICBlbGlnID0gZWxpZ2liaWxpdHkodywgaCwgdGgsIHR2KQogICAgICAgICAgICAgICAgICAgIHRvdGFsICs9IDEKICAgICAgICAgICAgICAgICAgICBlbGlnZ2N0W2VsaWddICs9IDEKICAgICAgICAgICAgICAgICAgICBkaXN0WygiJWR4JWQiICUgKHcsIGgpLCBlbGlnKV0gKz0gMQogICAgICAgICAgICAgICAgICAgIGlmIGNvbXAgPT0gMDoKICAgICAgICAgICAgICAgICAgICAgICAgbHVtYSArPSAxCiAgICAgICAgICAgICAgICAgICAgICAgIGlmIHRoICE9IHR2OgogICAgICAgICAgICAgICAgICAgICAgICAgICAgbWl4ZWRfYXhpcyArPSAxCiAgICAgICAgICAgICAgICAgICAgICAgIGlmIG5vdCAodGggPT0gMCBhbmQgdHYgPT0gMCkKICAgICAgICAgICAgICAgICAgICAgICAgICAgICBtdHNfbHVtYSArPSAxCiAgICAgICAgICAgICAgICAgICAgb3V0X3Jvd3MuYXBwZW5kKFtzZXEsIHFwLCBhcmdzLmNvbmZpZywgcG9jLCBDT01QTkFNRS5nZXQoY29tcCwgY29tcCksCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB4LCB5LCB3LCBoLCBUUk5BTUUuZ2V0KHRoLCB0aCksIFRSTkFNRS5nZXQodHYsIHR2KSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHNpemVfbW9kZSh3KSwgc2l6ZV9tb2RlKGgpLCBlbGlnXSkKCiAgICBpZiBub3Qgb3V0X3Jvd3M6CiAgICAgICAgcmFpc2UgU3lzdGVtRXhpdCgibm8gcm93cyBwcm9kdWNlZCAtLSBjaGVjayAtLWlucHV0IHBhdGhzIikKCiAgICB0cmFjZV9wYXRoID0gb3MucGF0aC5qb2luKGFyZ3Mub3V0X2RpciwgInR1X3RyYWNlLmNzdiIpCiAgICB3aXRoIG9wZW4odHJhY2VfcGF0aCwgInciLCBuZXdsaW5lPSIiKSBhcyBmOgogICAgICAgIHd0ciA9IGNzdi53cml0ZXIoZikKICAgICAgICB3dHIud3JpdGVyb3coWyJzZXF1ZW5jZSIsICJxcCIsICJjb25maWciLCAicG9jIiwgImNvbXAiLCAieCIsICJ5IiwKICAgICAgICAgICAgICAgICAgICAgICJ3aWR0aCIsICJoZWlnaHQiLCAidHJUeXBlSG9yIiwgInRyVHlwZVZlciIsCiAgICAgICAgICAgICAgICAgICAgICAid19tb2RlIiwgImhfbW9kZSIsICJlbGlnaWJpbGl0eSJdKQogICAgICAgIHd0ci53cml0ZXJvd3Mob3V0X3Jvd3MpCgogICAgZGlzdF9wYXRoID0gb3MucGF0aC5qb2luKGFyZ3Mub3V0X2RpciwgInR1X2Rpc3RyaWJ1dGlvbi5jc3YiKQogICAgd2l0aCBvcGVuKGRpc3RfcGF0aCwgInciLCBuZXdsaW5lPSIiKSBhcyBmOgogICAgICAgIHd0ciA9IGNzdi53cml0ZXIoZikKICAgICAgICB3dHIud3JpdGVyb3coWyJibG9jayIsICJlbGlnaWJpbGl0eSIsICJjb3VudCIsICJwY3Rfb2ZfdG90YWwiXSkKICAgICAgICBmb3IgKGJsaywgZWxpZyksIGMgaW4gc29ydGVkKGRpc3QuaXRlbXMoKSwga2V5PWxhbWJkYSBrdjogLWt2WzFdKToKICAgICAgICAgICAgd3RyLndyaXRlcm93KFtibGssIGVsaWcsIGMsIHJvdW5kKDEwMC4wICogYyAvIHRvdGFsLCA0KV0pCgogICAgc3VtX3BhdGggPSBvcy5wYXRoLmpvaW4oYXJncy5vdXRfZGlyLCAidHVfc3VtbWFyeS50eHQiKQogICAgd2l0aCBvcGVuKHN1bV9wYXRoLCAidyIpIGFzIGY6CiAgICAgICAgZi53cml0ZSgiUGhhc2UgMSAtLSBWVE0gY29kZWQtVFUgd29ya2xvYWQgc3VtbWFyeSAoUE9DLWNvcnJlY3RlZClcbiIpCiAgICAgICAgZi53cml0ZSgiY29uZmlnPSVzICBmaWxlcz0lZFxuIiAlIChhcmdzLmNvbmZpZywgZmlsZXNfc2VlbikpCiAgICAgICAgZi53cml0ZSgidG90YWwgY29kZWQgdHJhbnNmb3JtIGpvYnM6ICVkXG4iICUgdG90YWwpCiAgICAgICAgZi53cml0ZSgiICBsdW1hIGpvYnM6ICVkXG4iICUgbHVtYSkKICAgICAgICBmLndyaXRlKCJcbkVsaWdpYmlsaXR5IGNsYXNzIChyb3V0aW5nIHRhcmdldCk6XG4iKQogICAgICAgIGZvciBrIGluICgiRENUMl9MQVJHRSIsICJEQ1QyX1NNQUxMIiwgIk1UUyIsICJVTlNFUlZBQkxFIik6CiAgICAgICAgICAgIGMgPSBlbGlnX2N0LmdldChrLCAwKQogICAgICAgICAgICBmLndyaXRlKCIgICUtMTFzICUxMGQgICU2LjJmJSVcbiIgJSAoaywgYywgMTAwLjAgKiBjIC8gdG90YWwgaWYgdG90YWwgZWxzZSAwKSkKICAgICAgICBpZiBsdW1hOgogICAgICAgICAgICBmLndyaXRlKCJcbkx1bWEgTVRTIGFjdGl2aXR5OiAlLjJmJSVcbiIgJSAoMTAwLjAgKiBtdHNfbHVtYSAvIGx1bWEpKQogICAgICAgICAgICBmLndyaXRlKCJMdW1hIG1peGVkIHBlci1heGlzIGtlcm5lbCAodHJIb3IhPXRyVmVyKTogJS4yZiUlIgogICAgICAgICAgICAgICAgICAgICIgICAobWFudXNjcmlwdC9SVEwgcmVmZXJlbmNlIH43LjclJSlcbiIgJSAoMTAwLjAgKiBtaXhlZF9heGlzIC8gbHVtYSkpCiAgICAgICAgZi53cml0ZSgiXG5Ub3AgMTIgKGJsb2NrLCBjbGFzcykgYnkgZnJlcXVlbmN5OlxuIikKICAgICAgICBmb3IgKGJsaywgZWxpZyksIGMgaW4gc29ydGVkKGRpc3QuaXRlbXMoKSwga2V5PWxhbWJkYSBrdjogLWt2WzFdKVs6MTJdOgogICAgICAgICAgICBmLndyaXRlKCIgICUtOXMgJS0xMXMgJTEwZCAgJTYuMmYlJVxuIiAlIChibGssIGVsaWcsIGMsIDEwMC4wICogYyAvIHRvdGFsKSkKCiAgICBwcmludCgid3JvdGU6IikKICAgIGZvciBwIGluICh0cmFjZV9wYXRoLCBkaXN0X3BhdGgsIHN1bV9wYXRoKToKICAgICAgICBwcmludCgiICAlcyIgJSBwKQogICAgcHJpbnQoInRvdGFsIGpvYnM6ICVkIiAlIHRvdGFsKQoKCmlmIF9fbmFtZV9fID09ICJfX21haW5fXyI6CiAgICBtYWluKCkK | base64 -d > tools/merge_tu_trace_v2.py
+      - name: Download primary shard artifacts (run_id_a)
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tutrace-*
+          path: raw_a
+          run-id: ${{ github.event.inputs.run_id_a }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - name: Download secondary shard artifacts (run_id_b)
+        if: github.event.inputs.run_id_b != '0'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tutrace-*
+          path: raw_b
+          run-id: ${{ github.event.inputs.run_id_b }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - name: Merge with corrected POC offsets
+        run: |
+          if [ "${{ github.event.inputs.run_id_b }}" != "0" ]; then
+            python3 tools/merge_tu_trace_v2.py out --config "${{ github.event.inputs.config_tag }}" \
+              --input raw_a --shard-frames "${{ github.event.inputs.shard_frames_a }}" --exclude "${{ github.event.inputs.exclude_prefix }}" \
+              --input raw_b --shard-frames "${{ github.event.inputs.shard_frames_b }}"
+          else
+            python3 tools/merge_tu_trace_v2.py out --config "${{ github.event.inputs.config_tag }}" \
+              --input raw_a --shard-frames "${{ github.event.inputs.shard_frames_a }}"
+          fi
+          echo "----- tu_summary.txt -----"; cat out/tu_summary.txt
+      - name: Upload POC-corrected consolidated workload
+        uses: actions/upload-artifact@v4
+        with:
+          name: tu-traces-${{ github.event.inputs.config_tag }}-pocfixed
+          path: |
+            out/tu_trace.csv
+            out/tu_distribution.csv
+            out/tu_summary.txt
+          if-no-files-found: error
