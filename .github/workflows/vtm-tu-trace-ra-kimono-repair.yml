@@ -1,0 +1,124 @@
+# RA Kimono repair -- targeted re-run of the 3 shards that failed in
+# run 30968011739 (vtm-tu-trace-inter-full-native.yml, RA):
+#   Kimono qp22 shard 0 (frames 0-63)   -> exceeded 6h0m0s cap, canceled
+#   Kimono qp22 shard 1 (frames 64-127) -> exceeded 6h0m0s cap, canceled
+#   Kimono qp32 shard 1 (frames 64-127) -> hosted runner lost communication
+#
+# Fix: halve the shard to 32 frames (still exactly 1 RA IntraPeriod=32 GOP,
+# zero coding-structure bias). No merge job here -- outputs are combined
+# locally with the already-merged 229-shard tu-traces-RA-full-native.
+name: VTM TU Trace (RA Kimono repair)
+run-name: 'RA Kimono repair -- 6 sub-shards (qp22 s0/s1, qp32 s1)'
+on:
+  workflow_dispatch: {}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y cmake build-essential
+      - name: Write instrumentation tool
+        run: |
+          mkdir -p tools
+          echo IyEvdXNyL2Jpbi9lbnYgcHl0aG9uMwojIGluamVjdF90dV90cmFjZS5weSAgLS0gIFBoYXNlIDEgVFUtd29ya2xvYWQgaW5zdHJ1bWVudGF0aW9uIGZvciBWVE0uCiMKIyBJbmplY3RzIGEgcnVudGltZS1nYXRlZCwgcGVyLVRVIHRyYW5zZm9ybSB0cmFjZSBkdW1wIGludG8gVlRNJ3MgVHJRdWFudC5jcHAsCiMgcmlnaHQgYWZ0ZXIgZXZlcnkgYGdldFRyVHlwZXModHUsIGNvbXBJRCwgdHJUeXBlSG9yLCB0clR5cGVWZXIpYCBjYWxsLgojCiMgV0hZIFRISVMgUE9JTlQ6IGdldFRyVHlwZXMgcmVzb2x2ZXMgdGhlIHBlci1heGlzIHRyYW5zZm9ybSBrZXJuZWwKIyAoRENULUlJIC8gRFNULVZJSSAvIERDVC1WSUlJKSBmb3IgYSBUVS4gSXQgaXMgY2FsbGVkIGJ5IGJvdGggdGhlIGZvcndhcmQKIyAoeFQsIGVuY29kZXIpIGFuZCBpbnZlcnNlICh4SVQsIGRlY29kZXIpIHRyYW5zZm9ybSBwYXRocy4gVGhlIGluamVjdGVkIGR1bXAKIyBvbmx5IHdyaXRlcyB3aGVuIHRoZSBlbnYgdmFyIFZUTV9UVV9UUkFDRSBpcyBzZXQgdG8gYW4gb3V0cHV0IHBhdGggLS0gd2Ugc2V0CiMgaXQgT05MWSBmb3IgdGhlIERFQ09ERVIgcnVuLCBzbzoKIyAgICogZW5jb2RlciBydW4gIChlbnYgdW5zZXQpIC0+IG5vIG91dHB1dCwgemVybyBSRE8tdHJpYWwgY29udGFtaW5hdGlvbgojICAgKiBkZWNvZGVyIHJ1biAgKGVudiBzZXQpICAgLT4gZXhhY3RseSBvbmUgcm93IHBlciBGSU5BTCBjb2RlZCBUVSB0aGF0CiMgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBhY3R1YWxseSByZXF1aXJlcyBhIHRyYW5zZm9ybSAoQ0JGPTEpLAojICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaS5lLiB0aGUgdHJ1ZSB0cmFuc2Zvcm0tZW5naW5lIHdvcmtsb2FkLgojIFRoaXMgbWF0Y2hlcyB0aGUgbWFudXNjcmlwdCdzIGNvZGVkLVRVIGNoYXJhY3RlcmlzYXRpb24gbWV0aG9kb2xvZ3kKIyAofjEuODdNIGpvYnMgb3ZlciB0aGUgQ1RDIGNvcnB1cyksIG5vdCB0aGUgZmFyIGxhcmdlciBSRE8tdHJpYWwgY291bnQuCiMKIyBUaGUgaG9vayBpcyBpZGVtcG90ZW50IChndWFyZGVkIGJ5IGEgbWFya2VyKSBhbmQgaGFzIHplcm8gZWZmZWN0IG9uIGEgc3RvY2sKIyBidWlsZCB3aGVuIFZUTV9UVV9UUkFDRSBpcyB1bnNldCwgc28gaXQgaXMgc2FmZSB0byBsZWF2ZSBhcHBsaWVkLgojCiMgVXNhZ2U6ICBweXRob24zIGluamVjdF90dV90cmFjZS5weSA8cGF0aC10by1WVE0tY2hlY2tvdXQ+CiMgRXhpdCAwIG9uIHN1Y2Nlc3MgKG9yIGFscmVhZHktYXBwbGllZCksIG5vbi16ZXJvIGlmIHRoZSBhbmNob3IgaXMgbm90IGZvdW5kLgoKaW1wb3J0IG9zCmltcG9ydCByZQppbXBvcnQgc3lzCgpNQVJLRVIgPSAiX19WVE1fVFVfVFJBQ0VfXyIKCiMgUnVudGltZS1nYXRlZCBkdW1wLiBVc2VzIHR1LmJsb2Nrc1tjb21wSURdIGZvciBnZW9tZXRyeSBzbyBpdCBpcyBpZGVudGljYWwKIyBvbiB0aGUgZm9yd2FyZCBhbmQgaW52ZXJzZSBwYXRocyAoeElUIGhhcyBubyBsb2NhbCB3aWR0aC9oZWlnaHQgaW4gc2NvcGUpLgpIT09LID0gKAogICAgIiAgICAvKiB7bWFya2VyfSAqLyB7eyBjb25zdCBjaGFyKiBfX3RwID0gZ2V0ZW52KFwiVlRNX1RVX1RSQUNFXCIpOyAiCiAgICAiaWYoX190cCl7eyBzdGF0aWMgRklMRSogX190Zj1udWxscHRyOyBpZighX190ZikgX190Zj1mb3BlbihfX3RwLFwiYVwiKTsgIgogICAgImlmKF9fdGYpe3sgY29uc3QgQ29tcEFyZWEmIF9fY2EgPSB0dS5ibG9ja3NbY29tcElEXTsgIgogICAgImZwcmludGYoX190ZixcIiVkLCVkLCVkLCVkLCVkLCVkLCVkLCVkXFxuXCIsIgogICAgIihpbnQpdHUuY3UtPnNsaWNlLT5nZXRQT0MoKSwoaW50KWNvbXBJRCwoaW50KV9fY2EueCwoaW50KV9fY2EueSwiCiAgICAiKGludClfX2NhLndpZHRoLChpbnQpX19jYS5oZWlnaHQsKGludCl0clR5cGVIb3IsKGludCl0clR5cGVWZXIpOyB9fSB9fSB9fVxuIgopLmZvcm1hdChtYXJrZXI9TUFSS0VSKQoKIyBNYXRjaGVzIGEgZ2V0VHJUeXBlcyBDQUxMICh0cmFpbGluZyAnOycpLCBub3QgdGhlIGZ1bmN0aW9uIGRlZmluaXRpb24KIyAod2hvc2Ugc2lnbmF0dXJlIHJlYWRzIGBpbnQgJnRyVHlwZUhvcmApLiBUb2xlcmFudCBvZiB3aGl0ZXNwYWNlLgpBTkNIT1IgPSByZS5jb21waWxlKAogICAgciJnZXRUclR5cGVzXHMqXChccyp0dVxzKixccypjb21wSURccyosXHMqdHJUeXBlSG9yXHMqLFxzKnRyVHlwZVZlclxzKlwpXHMqO1teXG5dKlxuIgopCgoKZGVmIGZpbmRfdHJxdWFudChyb290KToKICAgIGNhbmRpZGF0ZXMgPSBbCiAgICAgICAgb3MucGF0aC5qb2luKHJvb3QsICJzb3VyY2UiLCAiTGliIiwgIkNvbW1vbkxpYiIsICJUclF1YW50LmNwcCIpLAogICAgICAgIG9zLnBhdGguam9pbihyb290LCAiTGliIiwgIkNvbW1vbkxpYiIsICJUclF1YW50LmNwcCIpLAogICAgXQogICAgZm9yIGMgaW4gY2FuZGlkYXRlczoKICAgICAgICBpZiBvcy5wYXRoLmlzZmlsZShjKToKICAgICAgICAgICAgcmV0dXJuIGMKICAgICMgbGFzdCByZXNvcnQ6IHNlYXJjaAogICAgZm9yIGRwLCBfLCBmbnMgaW4gb3Mud2Fsayhyb290KToKICAgICAgICBpZiAiVHJRdWFudC5jcHAiIGluIGZuczoKICAgICAgICAgICAgcmV0dXJuIG9zLnBhdGguam9pbihkcCwgIlRyUXVhbnQuY3BwIikKICAgIHJldHVybiBOb25lCgoKZGVmIGVuc3VyZV9pbmNsdWRlcyhzcmMpOgogICAgaWYgIiNpbmNsdWRlIDxjc3RkaW8+IiBpbiBzcmMgYW5kICIjaW5jbHVkZSA8Y3N0ZGxpYj4iIGluIHNyYzoKICAgICAgICByZXR1cm4gc3JjCiAgICAjIGluc2VydCBhZnRlciB0aGUgZmlyc3QgI2luY2x1ZGUgbGluZQogICAgbSA9IHJlLnNlYXJjaChyIl4jaW5jbHVkZVteXG5dKlxuIiwgc3JjLCByZS5NKQogICAgaWYgbm90IG06CiAgICAgICAgcmV0dXJuICIjaW5jbHVkZSA8Y3N0ZGlvPlxuI2luY2x1ZGUgPGNzdGRsaWI+XG4iICsgc3JjCiAgICBpbnMgPSAiIgogICAgaWYgIiNpbmNsdWRlIDxjc3RkaW8+IiBub3QgaW4gc3JjOgogICAgICAgIGlucyArPSAiI2luY2x1ZGUgPGNzdGRpbz5cbiIKICAgIGlmICIjaW5jbHVkZSA8Y3N0ZGxpYj4iIG5vdCBpbiBzcmM6CiAgICAgICAgaW5zICs9ICIjaW5jbHVkZSA8Y3N0ZGxpYj5cbiIKICAgIGkgPSBtLmVuZCgpCiAgICByZXR1cm4gc3JjWzppXSArIGlucyArIHNyY1tpOl0KCgpkZWYgbWFpbigpOgogICAgaWYgbGVuKHN5cy5hcmd2KSAhPSAyOgogICAgICAgIHByaW50KCJ1c2FnZTogaW5qZWN0X3R1X3RyYWNlLnB5IDxWVE0tY2hlY2tvdXQtcm9vdD4iLCBmaWxlPXN5cy5zdGRlcnIpCiAgICAgICAgcmV0dXJuIDIKICAgIHJvb3QgPSBzeXMuYXJndlsxXQogICAgcGF0aCA9IGZpbmRfdHJxdWFudChyb290KQogICAgaWYgbm90IHBhdGg6CiAgICAgICAgcHJpbnQoIkVSUk9SOiBUclF1YW50LmNwcCBub3QgZm91bmQgdW5kZXIgJXMiICUgcm9vdCwgZmlsZT1zeXMuc3RkZXJyKQogICAgICAgIHJldHVybiAzCgogICAgd2l0aCBvcGVuKHBhdGgsICJyIiwgZW5jb2Rpbmc9InV0Zi04IiwgZXJyb3JzPSJyZXBsYWNlIikgYXMgZjoKICAgICAgICBzcmMgPSBmLnJlYWQoKQoKICAgIGlmIE1BUktFUiBpbiBzcmM6CiAgICAgICAgcHJpbnQoImFscmVhZHkgaW5zdHJ1bWVudGVkOiAlcyIgJSBwYXRoKQogICAgICAgIHJldHVybiAwCgogICAgbWF0Y2hlcyA9IGxpc3QoQU5DSE9SLmZpbmRpdGVyKHNyYykpCiAgICBpZiBub3QgbWF0Y2hlczoKICAgICAgICBwcmludCgiRVJST1I6IGdldFRyVHlwZXModHUsY29tcElELHRyVHlwZUhvcix0clR5cGVWZXIpIGFuY2hvciBub3QgZm91bmQgaW4gJXMiCiAgICAgICAgICAgICAgJSBwYXRoLCBmaWxlPXN5cy5zdGRlcnIpCiAgICAgICAgcHJpbnQoIiAgICAgICBWVE0gbGF5b3V0IG1heSBkaWZmZXIgLS0gaW5zcGVjdCBUclF1YW50LmNwcCBhbmQgYWRqdXN0IEFOQ0hPUi4iLAogICAgICAgICAgICAgIGZpbGU9c3lzLnN0ZGVycikKICAgICAgICByZXR1cm4gNAoKICAgICMgSW5zZXJ0IGhvb2sgYWZ0ZXIgZWFjaCBhbmNob3IsIGJhY2stdG8tZnJvbnQgdG8ga2VlcCBvZmZzZXRzIHZhbGlkLgogICAgb3V0ID0gc3JjCiAgICBmb3IgbSBpbiByZXZlcnNlZChtYXRjaGVzKToKICAgICAgICBvdXQgPSBvdXRbOm0uZW5kKCldICsgSE9PSyArIG91dFttLmVuZCgpOl0KCiAgICBvdXQgPSBlbnN1cmVfaW5jbHVkZXMob3V0KQoKICAgIHdpdGggb3BlbihwYXRoLCAidyIsIGVuY29kaW5nPSJ1dGYtOCIpIGFzIGY6CiAgICAgICAgZi53cml0ZShvdXQpCgogICAgcHJpbnQoImluc3RydW1lbnRlZCAlZCBjYWxsIHNpdGUocykgaW4gJXMiICUgKGxlbihtYXRjaGVzKSwgcGF0aCkpCiAgICByZXR1cm4gMAoKCmlmIF9fbmFtZV9fID09ICJfX21haW5fXyI6CiAgICBzeXMuZXhpdChtYWluKCkpCg== | base64 -d > tools/inject_tu_trace.py
+      - name: Instrument TrQuant.cpp
+        run: python3 tools/inject_tu_trace.py .
+      - name: Configure CMake
+        run: |
+          mkdir -p build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+      - name: Build Encoder + Decoder
+        run: cd build && make -j"$(nproc)" EncoderApp DecoderApp
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: vtm-binaries
+          path: |
+            bin/**/EncoderApp
+            bin/**/DecoderApp
+          if-no-files-found: error
+  prep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Restore/seed sequence cache
+        id: seqcache
+        uses: actions/cache@v4
+        with:
+          path: test_sequences
+          key: vtm-test-sequences-v2
+      - name: Download sequences ONCE (cache miss only, retry, verify complete)
+        if: steps.seqcache.outputs.cache-hit != 'true'
+        run: |
+          pip install --quiet gdown
+          rm -rf test_sequences && mkdir -p test_sequences
+          ok=0
+          for i in 1 2 3 4 5 6; do
+            gdown --folder "https://drive.google.com/drive/folders/17rwtLY3f49dQRy2CT2Jl1w5eTJdc3TvK" -O test_sequences || true
+            n=$(find test_sequences -type f -iname '*.yuv' | wc -l)
+            if [ "$n" -ge 8 ]; then ok=1; echo "got $n sequences"; break; fi
+            echo "attempt $i: only $n/8 -- sleeping 60s"; sleep 60
+          done
+          if [ "$ok" != "1" ]; then echo "FAILED: <8 sequences"; rm -rf test_sequences; exit 1; fi
+          find test_sequences -type f -iname '*.yuv' -printf '%f\n'
+  trace:
+    needs: [build, prep]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { qp: '22', label: '0a', frameskip: '0',  frames: '32' }
+          - { qp: '22', label: '0b', frameskip: '32', frames: '32' }
+          - { qp: '22', label: '1a', frameskip: '64', frames: '32' }
+          - { qp: '22', label: '1b', frameskip: '96', frames: '32' }
+          - { qp: '32', label: '1a', frameskip: '64', frames: '32' }
+          - { qp: '32', label: '1b', frameskip: '96', frames: '32' }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: vtm-binaries
+          path: bin
+      - name: Restore sequences from cache (no Drive access)
+        uses: actions/cache@v4
+        with:
+          path: test_sequences
+          key: vtm-test-sequences-v2
+      - name: Verify sequences present
+        run: |
+          if [ -z "$(find test_sequences -type f -iname '*.yuv' 2>/dev/null)" ]; then
+            echo "sequence cache empty"; exit 1
+          fi
+      - name: Encode sub-shard -> .bin (RA, Kimono only, 32-frame windows)
+        run: |
+          set -u
+          ENC="$(find bin -type f -name 'EncoderApp' | head -n1)"; chmod +x "$ENC"
+          QP="${{ matrix.qp }}"; LABEL="${{ matrix.label }}"
+          FS="${{ matrix.frameskip }}"; WANT="${{ matrix.frames }}"
+          CFG="cfg/per-sequence/Kimono.cfg"; mkdir -p encode_out
+          YUV="$(find test_sequences -type f -iname '*Kimono*1920x1080*.yuv' | head -n1)"
+          if [ -z "$YUV" ]; then echo "YUV not found"; exit 1; fi
+          BYTES=$(stat -c%s "$YUV"); FRAME_BYTES=$((1920*1080*3/2)); TOTAL=$((BYTES/FRAME_BYTES))
+          REMAIN=$((TOTAL-FS))
+          if [ "$REMAIN" -le 0 ]; then echo "past EOF (TOTAL=$TOTAL)"; exit 0; fi
+          READ=$WANT; [ "$REMAIN" -lt "$WANT" ] && READ=$REMAIN
+          echo "encoding Kimono qp$QP FrameSkip=$FS -f $READ (TOTAL=$TOTAL)"
+          "$ENC" -c cfg/encoder_randomaccess_vtm.cfg -c "$CFG" -i "$YUV" \
+            -b "encode_out/Kimono_qp${QP}_s${LABEL}.bin" -o /dev/null \
+            -q "$QP" --FrameSkip="$FS" -f "$READ"
+      - name: Decode sub-shard with TU trace ON
+        env:
+          VTM_TU_TRACE: ${{ github.workspace }}/Kimono_qp${{ matrix.qp }}.tutrace.csv
+        run: |
+          set -u
+          DEC="$(find bin -type f -name 'DecoderApp' | head -n1)"; chmod +x "$DEC"
+          "$DEC" -b "encode_out/Kimono_qp${{ matrix.qp }}_s${{ matrix.label }}.bin" -o /dev/null
+          echo "rows: $(wc -l < Kimono_qp${{ matrix.qp }}.tutrace.csv)"
+      - name: Upload per-shard trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tutrace-Kimono-qp${{ matrix.qp }}-s${{ matrix.label }}
+          path: Kimono_qp${{ matrix.qp }}.tutrace.csv
+          if-no-files-found: error
