@@ -1,16 +1,51 @@
-# RA Kimono repair -- targeted re-run of the 3 shards that failed in
-# run 30968011739 (vtm-tu-trace-inter-full-native.yml, RA):
-#   Kimono qp22 shard 0 (frames 0-63)   -> exceeded 6h0m0s cap, canceled
-#   Kimono qp22 shard 1 (frames 64-127) -> exceeded 6h0m0s cap, canceled
-#   Kimono qp32 shard 1 (frames 64-127) -> hosted runner lost communication
+# Kimono repair -- targeted re-run of Kimono sub-shards that failed a main
+# vtm-tu-trace-inter-full-native.yml run because a 64-frame shard was too
+# expensive to finish inside GitHub's 6h per-job cap. Originally written for
+# RA run 30968011739 (3 failures: qp22 s0/s1, qp32 s1); generalized here via
+# workflow_dispatch inputs (enc_cfg/config_tag/matrix_json) so it can be
+# re-dispatched for any config (RA/LDB/LDP) and any set of failed shards
+# without editing the file.
 #
-# Fix: halve the shard to 32 frames (still exactly 1 RA IntraPeriod=32 GOP,
-# zero coding-structure bias). No merge job here -- outputs are combined
-# locally with the already-merged 229-shard tu-traces-RA-full-native.
-name: VTM TU Trace (RA Kimono repair)
-run-name: 'RA Kimono repair -- 6 sub-shards (qp22 s0/s1, qp32 s1)'
+# Root cause: RA/LDB hierarchical-B motion search at 1920x1080 makes a
+# 64-frame shard too expensive on a GitHub-hosted runner (Kimono/ParkScene
+# at 1080p are far more expensive per-frame than the other 7 CTC sequences
+# here, all <=832x480 or 720p). Blind re-run of the same 64-frame job would
+# very likely fail the same way again -- CPU throughput on a GitHub-hosted
+# runner is fixed, so nothing about a retry changes the wall-clock cost of
+# the same work.
+#
+# Fix: halve the shard to 32 frames. This is still exactly 1 RA IntraPeriod
+# (=32) GOP, so it introduces zero coding-structure bias vs the rest of the
+# corpus (same rationale as the original 64-frame choice, just one GOP
+# instead of two). Smaller frame count also reduces peak reference-picture
+# memory, which plausibly helps runner "lost communication" (likely OOM)
+# failures too, so those are repaired the same way as cheap insurance.
+#
+# matrix_json entries are {qp,label,frameskip,frames} sub-shards, e.g. a
+# failed 64-frame shard N (FrameSkip=N*64) becomes two 32-frame sub-shards:
+#   { qp, label: "Na", frameskip: N*64,    frames: 32 }
+#   { qp, label: "Nb", frameskip: N*64+32, frames: 32 }
+#
+# This workflow does NOT include a merge job -- its small per-shard
+# artifacts are combined locally with the target run's already-merged
+# tu-traces-<config_tag>-full-native artifact.
+name: VTM TU Trace (Kimono repair)
+run-name: 'Kimono repair -- ${{ inputs.config_tag }} sub-shards'
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      enc_cfg:
+        description: 'Encoder cfg under cfg/ (encoder_randomaccess_vtm.cfg / encoder_lowdelay_vtm.cfg / encoder_lowdelay_P_vtm.cfg)'
+        required: true
+        default: 'encoder_randomaccess_vtm.cfg'
+      config_tag:
+        description: 'Short tag (RA/LDB/LDP) -- also tags the output artifact name'
+        required: true
+        default: 'RA'
+      matrix_json:
+        description: 'JSON array of {qp,label,frameskip,frames} Kimono sub-shards to repair'
+        required: true
+        default: '[{"qp":"22","label":"0a","frameskip":"0","frames":"32"},{"qp":"22","label":"0b","frameskip":"32","frames":"32"},{"qp":"22","label":"1a","frameskip":"64","frames":"32"},{"qp":"22","label":"1b","frameskip":"96","frames":"32"},{"qp":"32","label":"1a","frameskip":"64","frames":"32"},{"qp":"32","label":"1b","frameskip":"96","frames":"32"}]'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -66,13 +101,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { qp: '22', label: '0a', frameskip: '0',  frames: '32' }
-          - { qp: '22', label: '0b', frameskip: '32', frames: '32' }
-          - { qp: '22', label: '1a', frameskip: '64', frames: '32' }
-          - { qp: '22', label: '1b', frameskip: '96', frames: '32' }
-          - { qp: '32', label: '1a', frameskip: '64', frames: '32' }
-          - { qp: '32', label: '1b', frameskip: '96', frames: '32' }
+        include: ${{ fromJson(inputs.matrix_json) }}
     steps:
       - uses: actions/checkout@v4
       - name: Download binaries
@@ -90,10 +119,11 @@ jobs:
           if [ -z "$(find test_sequences -type f -iname '*.yuv' 2>/dev/null)" ]; then
             echo "sequence cache empty"; exit 1
           fi
-      - name: Encode sub-shard -> .bin (RA, Kimono only, 32-frame windows)
+      - name: Encode sub-shard -> .bin (Kimono only, 32-frame windows)
         run: |
           set -u
           ENC="$(find bin -type f -name 'EncoderApp' | head -n1)"; chmod +x "$ENC"
+          ENCCFG="${{ inputs.enc_cfg }}"
           QP="${{ matrix.qp }}"; LABEL="${{ matrix.label }}"
           FS="${{ matrix.frameskip }}"; WANT="${{ matrix.frames }}"
           CFG="cfg/per-sequence/Kimono.cfg"; mkdir -p encode_out
@@ -103,8 +133,8 @@ jobs:
           REMAIN=$((TOTAL-FS))
           if [ "$REMAIN" -le 0 ]; then echo "past EOF (TOTAL=$TOTAL)"; exit 0; fi
           READ=$WANT; [ "$REMAIN" -lt "$WANT" ] && READ=$REMAIN
-          echo "encoding Kimono qp$QP FrameSkip=$FS -f $READ (TOTAL=$TOTAL)"
-          "$ENC" -c cfg/encoder_randomaccess_vtm.cfg -c "$CFG" -i "$YUV" \
+          echo "encoding Kimono qp$QP cfg $ENCCFG FrameSkip=$FS -f $READ (TOTAL=$TOTAL)"
+          "$ENC" -c "cfg/$ENCCFG" -c "$CFG" -i "$YUV" \
             -b "encode_out/Kimono_qp${QP}_s${LABEL}.bin" -o /dev/null \
             -q "$QP" --FrameSkip="$FS" -f "$READ"
       - name: Decode sub-shard with TU trace ON
@@ -119,6 +149,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tutrace-Kimono-qp${{ matrix.qp }}-s${{ matrix.label }}
+          name: tutrace-Kimono-${{ inputs.config_tag }}-qp${{ matrix.qp }}-s${{ matrix.label }}
           path: Kimono_qp${{ matrix.qp }}.tutrace.csv
           if-no-files-found: error
