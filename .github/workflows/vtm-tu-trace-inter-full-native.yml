@@ -3,18 +3,24 @@
 # replacing the old fixed 128-frame cap (frames input, default 128) that
 # every prior RA/LDB/LDP run used regardless of native length.
 #
-# Same 58 (sequence,shard) pairs x 4 QPs = 232 jobs as the AI full-native
-# workflow, same 64-source-frame shard granularity, same byte-size-derived
-# EOF clamp (authoritative regardless of the native-length estimate used to
-# size the matrix): Kimono 240 (4 shards) | ParkScene 240 (4) |
-# RaceHorsesC 300 (5) | RaceHorsesD 300 (5) | BQMall ~600 (10) |
-# BQSquare ~600 (10) | FourPeople 600 (10) | Johnny 600 (10).
+# 58 (sequence,shard) pairs x 4 QPs = 232 jobs, 64-source-frame shard
+# granularity, same byte-size-derived EOF clamp (authoritative regardless of
+# the native-length estimate used to size the matrix), EXCEPT Kimono is now
+# 8 shards of 32 frames (not 4 of 64): Kimono qp22 (RA + LDB) and qp32
+# (RA) shards blew the 6h per-job cap at 64 frames -- 1920x1080 RA/LDB
+# hierarchical-B motion search on this sequence is far more expensive than
+# the rest of the corpus (ParkScene, same resolution, never failed). Halving
+# to 32 frames keeps every Kimono shard well under 6h; 32 is still exactly
+# 1 RA IntraPeriod, so no coding-structure bias vs the rest of the corpus.
+# Kimono 240 (8 shards @ 32) | ParkScene 240 (4 @ 64) | RaceHorsesC 300 (5) |
+# RaceHorsesD 300 (5) | BQMall ~600 (10) | BQSquare ~600 (10) |
+# FourPeople 600 (10) | Johnny 600 (10). Total 248 jobs (was 232).
 #
 # Parameterized by enc_cfg/config_tag exactly like the workflow it replaces
 # -- dispatch once per config (RA / LDB / LDP) via workflow_dispatch inputs.
 # Does NOT cover the 8 official CTC sequences requiring JVET-gated access.
 name: VTM TU Trace (Phase 1 INTER full-native)
-run-name: 'Phase 1 INTER full-native -- ${{ inputs.config_tag }} (8 sequences, true CTC frame length, 232 shards)'
+run-name: 'Phase 1 INTER full-native -- ${{ inputs.config_tag }} (8 sequences, true CTC frame length, 248 shards, Kimono-safe)'
 on:
   workflow_dispatch:
     inputs:
@@ -86,18 +92,34 @@ jobs:
           - { sequence: Kimono, qp: '22', shard: '1' }
           - { sequence: Kimono, qp: '22', shard: '2' }
           - { sequence: Kimono, qp: '22', shard: '3' }
+          - { sequence: Kimono, qp: '22', shard: '4' }
+          - { sequence: Kimono, qp: '22', shard: '5' }
+          - { sequence: Kimono, qp: '22', shard: '6' }
+          - { sequence: Kimono, qp: '22', shard: '7' }
           - { sequence: Kimono, qp: '27', shard: '0' }
           - { sequence: Kimono, qp: '27', shard: '1' }
           - { sequence: Kimono, qp: '27', shard: '2' }
           - { sequence: Kimono, qp: '27', shard: '3' }
+          - { sequence: Kimono, qp: '27', shard: '4' }
+          - { sequence: Kimono, qp: '27', shard: '5' }
+          - { sequence: Kimono, qp: '27', shard: '6' }
+          - { sequence: Kimono, qp: '27', shard: '7' }
           - { sequence: Kimono, qp: '32', shard: '0' }
           - { sequence: Kimono, qp: '32', shard: '1' }
           - { sequence: Kimono, qp: '32', shard: '2' }
           - { sequence: Kimono, qp: '32', shard: '3' }
+          - { sequence: Kimono, qp: '32', shard: '4' }
+          - { sequence: Kimono, qp: '32', shard: '5' }
+          - { sequence: Kimono, qp: '32', shard: '6' }
+          - { sequence: Kimono, qp: '32', shard: '7' }
           - { sequence: Kimono, qp: '37', shard: '0' }
           - { sequence: Kimono, qp: '37', shard: '1' }
           - { sequence: Kimono, qp: '37', shard: '2' }
           - { sequence: Kimono, qp: '37', shard: '3' }
+          - { sequence: Kimono, qp: '37', shard: '4' }
+          - { sequence: Kimono, qp: '37', shard: '5' }
+          - { sequence: Kimono, qp: '37', shard: '6' }
+          - { sequence: Kimono, qp: '37', shard: '7' }
           - { sequence: ParkScene, qp: '22', shard: '0' }
           - { sequence: ParkScene, qp: '22', shard: '1' }
           - { sequence: ParkScene, qp: '22', shard: '2' }
@@ -352,12 +374,17 @@ jobs:
           YUV="$(find test_sequences -type f -iname "$GLOB" | head -n1)"
           if [ -z "$YUV" ]; then echo "YUV not found $LABEL"; exit 1; fi
           SRC_PER_SHARD=64
+          # Kimono blew the 6h per-job cap at 64 frames in both RA (qp22 s0/s1,
+          # qp32 s1) and LDB (qp22 s0) -- 1920x1080 hierarchical-B search on
+          # this sequence is unusually expensive. Halve its shard to 32 frames;
+          # still exactly 1 RA IntraPeriod, so zero coding-structure bias.
+          if [ "$LABEL" = "Kimono" ]; then SRC_PER_SHARD=32; fi
           FS=$((SHARD*SRC_PER_SHARD))
           # True source length from file size (4:2:0 8-bit); EOF-clamp is authoritative
           # regardless of the native-length estimate used to size the matrix above.
-          # RA intra period = 32 -> 64-frame shard boundaries are intra-period-aligned
-          # (zero bias). LDB/LDP have no periodic intra; a 64-frame boundary adds at
-          # most one extra I-frame per shard (<1% of frames, negligible on aggregate).
+          # RA intra period = 32 -> 32/64-frame shard boundaries are intra-period-
+          # aligned (zero bias). LDB/LDP have no periodic intra; a 32/64-frame
+          # boundary adds at most one extra I-frame per shard (negligible on aggregate).
           DIMS=$(basename "$YUV" | grep -oE '[0-9]+x[0-9]+' | head -n1)
           W=${DIMS%x*}; H=${DIMS#*x}
           BYTES=$(stat -c%s "$YUV"); FRAME_BYTES=$((W*H*3/2)); TOTAL=$((BYTES/FRAME_BYTES))
